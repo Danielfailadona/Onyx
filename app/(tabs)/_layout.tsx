@@ -1,35 +1,67 @@
 import { Tabs } from 'expo-router';
-import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { colors } from '../../src/utils/theme';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
+  return (
+    <View style={tabStyles.iconWrap}>
+      <Text style={[tabStyles.icon, focused && tabStyles.iconActive]}>{icon}</Text>
+    </View>
+  );
+}
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
         headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
+        tabBarStyle: tabStyles.bar,
+        tabBarActiveTintColor: colors.gold,
+        tabBarInactiveTintColor: colors.dim,
+        tabBarLabelStyle: tabStyles.label,
+      }}
+    >
       <Tabs.Screen
-        name="index"
+        name="marketplace"
         options={{
-          title: 'Home',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="house.fill" color={color} />,
+          title: 'Marketplace',
+          tabBarIcon: ({ focused }) => <TabIcon icon="◈" focused={focused} />,
         }}
       />
       <Tabs.Screen
-        name="explore"
+        name="companies"
         options={{
-          title: 'Explore',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
+          title: 'Companies',
+          tabBarIcon: ({ focused }) => <TabIcon icon="⊞" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="my-company"
+        options={{
+          title: 'My Company',
+          tabBarIcon: ({ focused }) => <TabIcon icon="⊕" focused={focused} />,
         }}
       />
     </Tabs>
   );
 }
+
+const tabStyles = StyleSheet.create({
+  bar: {
+    backgroundColor: colors.charcoal,
+    borderTopColor: colors.goldLine,
+    borderTopWidth: 1,
+    height: 68,
+    paddingTop: 6,
+  },
+  label: {
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 2,
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  iconWrap: { alignItems: 'center', justifyContent: 'center' },
+  icon: { fontSize: 20, color: colors.dim },
+  iconActive: { color: colors.gold },
+});
