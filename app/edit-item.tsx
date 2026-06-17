@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, Alert, StyleSheet, Image } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { useStore } from '../src/hooks/useStore';
 import { colors, spacing, radius } from '../src/utils/theme';
 import { CATEGORIES, CAT_EMOJI } from '../src/data/seed';
@@ -16,6 +17,19 @@ export default function EditItemScreen() {
   const [emoji, setEmoji] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+
+  async function pickImage() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      setImageUrl(result.assets[0].uri);
+    }
+  }
 
   useEffect(() => {
     if (item) {
@@ -24,6 +38,7 @@ export default function EditItemScreen() {
       setEmoji(item.emoji);
       setCategory(item.category);
       setDescription(item.description);
+      setImageUrl(item.image_url || '');
     }
   }, [item]);
 
@@ -50,7 +65,7 @@ export default function EditItemScreen() {
       Alert.alert('Error', 'Please enter a valid price.');
       return;
     }
-    await updateItem(id!, { name: name.trim(), price: p, emoji, category: category || 'Mains', description: description.trim() });
+    await updateItem(id!, { name: name.trim(), price: p, emoji, category: category || 'Mains', description: description.trim(), image_url: imageUrl || undefined });
     router.back();
   }
 
@@ -70,6 +85,15 @@ export default function EditItemScreen() {
 
         <Text style={styles.label}>PRICE (₱)</Text>
         <TextInput style={styles.input} value={price} onChangeText={setPrice} placeholderTextColor={colors.dim} keyboardType="decimal-pad" />
+
+        <Text style={styles.label}>IMAGE</Text>
+        <Pressable onPress={pickImage} style={styles.imagePicker}>
+          {imageUrl ? (
+            <Image source={{ uri: imageUrl }} style={styles.pickedImage} />
+          ) : (
+            <Text style={styles.imagePickerText}>Tap to choose image</Text>
+          )}
+        </Pressable>
 
         <Text style={styles.label}>EMOJI</Text>
         <TextInput style={styles.input} value={emoji} onChangeText={setEmoji} placeholderTextColor={colors.dim} maxLength={4} />
@@ -107,6 +131,9 @@ const styles = StyleSheet.create({
   pillActive: { backgroundColor: colors.goldDim, borderColor: colors.gold },
   pillText: { fontSize: 12, color: colors.mid },
   pillTextActive: { color: colors.gold, fontWeight: '600' },
+  imagePicker: { backgroundColor: colors.raised, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.goldLine, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', minHeight: 80 },
+  imagePickerText: { fontSize: 13, color: colors.dim },
+  pickedImage: { width: '100%', height: 120, borderRadius: radius.md, resizeMode: 'cover' },
   primaryBtn: { backgroundColor: colors.gold, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', marginTop: spacing.lg },
   primaryBtnText: { fontSize: 14, fontWeight: '700', color: colors.obsidian, letterSpacing: 2, textTransform: 'uppercase' },
 });

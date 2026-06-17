@@ -1,6 +1,6 @@
 export const CUISINES = [
   'Italian', 'Japanese', 'Steakhouse', 'Fast Food',
-  'Desserts', 'Healthy', 'Filipino', 'Asian',
+  'Desserts', 'Healthy', 'Filipino', 'Asian', 'Other',
 ];
 
 export const CUISINE_EMOJIS: Record<string, string> = {
@@ -47,6 +47,7 @@ export interface MenuItem {
   price: number;
   category: string;
   emoji: string;
+  image_url?: string;
   description: string;
   tags: string[];
   rating: number;

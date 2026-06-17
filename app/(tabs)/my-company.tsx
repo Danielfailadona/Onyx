@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, Text, TextInput, Pressable, ScrollView, Alert, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { useStore } from '../../src/hooks/useStore';
 import { useAuth } from '../../src/hooks/useAuth';
 import { colors, spacing, radius } from '../../src/utils/theme';
 import { CUISINES, CATEGORIES, CAT_EMOJI, type MenuItem } from '../../src/data/seed';
 import { Eyebrow, GoldLine, StoreLogo, EmptyState } from '../../src/components/UI';
+import { usePanel } from '../../src/hooks/usePanel';
 
 const TABS = ['Register', 'Add Item', 'Manage', 'Edit'];
 
@@ -15,6 +17,7 @@ const TAG_EMOJI: Record<string, string> = { popular: '🔥', new: '✨', veg: '�
 export default function MyCompanyScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
+  const { setOpen: setPanelOpen } = usePanel();
   const {
     company, menuItems, registerCompany, updateCompany, deleteCompany,
     addItem, removeItem,
@@ -27,6 +30,7 @@ export default function MyCompanyScreen() {
   const [regOwner, setRegOwner] = useState('');
   const [regEmail, setRegEmail] = useState('');
   const [regCuisines, setRegCuisines] = useState<string[]>([]);
+  const [customCuisine, setCustomCuisine] = useState('');
   const [regDesc, setRegDesc] = useState('');
 
   // Add Item form
@@ -34,6 +38,7 @@ export default function MyCompanyScreen() {
   const [itemPrice, setItemPrice] = useState('');
   const [itemCategory, setItemCategory] = useState('');
   const [itemEmoji, setItemEmoji] = useState('');
+  const [itemImage, setItemImage] = useState<string | null>(null);
   const [itemDesc, setItemDesc] = useState('');
   const [itemTags, setItemTags] = useState<string[]>([]);
 
@@ -45,13 +50,27 @@ export default function MyCompanyScreen() {
     setItemTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
   }
 
+  async function pickImage() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled) {
+      setItemImage(result.assets[0].uri);
+    }
+  }
+
   async function handleRegister() {
     if (!regName.trim() || !regOwner.trim() || !regEmail.trim() || !regDesc.trim()) {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
-    await registerCompany({ name: regName.trim(), owner: regOwner.trim(), email: regEmail.trim(), cuisines: regCuisines, description: regDesc.trim() });
-    Alert.alert('Success', 'Your company has been registered!');
+    const finalCuisines = regCuisines.includes('Other')
+      ? [...regCuisines.filter(c => c !== 'Other'), customCuisine.trim()].filter(Boolean)
+      : regCuisines;
+    await registerCompany({ name: regName.trim(), owner: regOwner.trim(), email: regEmail.trim(), cuisines: finalCuisines, description: regDesc.trim() });
     setActiveTab(1);
   }
 
@@ -65,9 +84,8 @@ export default function MyCompanyScreen() {
       Alert.alert('Error', 'Please enter a valid price.');
       return;
     }
-    await addItem({ name: itemName.trim(), price, category: itemCategory || 'Mains', emoji: itemEmoji || CAT_EMOJI[itemCategory] || '🍽', description: itemDesc.trim(), tags: itemTags });
-    setItemName(''); setItemPrice(''); setItemCategory(''); setItemEmoji(''); setItemDesc(''); setItemTags([]);
-    Alert.alert('Added', 'Menu item added successfully!');
+    await addItem({ name: itemName.trim(), price, category: itemCategory || 'Mains', emoji: itemEmoji || CAT_EMOJI[itemCategory] || '🍽', description: itemDesc.trim(), tags: itemTags, image_url: itemImage || undefined });
+    setItemName(''); setItemPrice(''); setItemCategory(''); setItemEmoji(''); setItemImage(null); setItemDesc(''); setItemTags([]);
   }
 
   function handleDeleteItem(item: MenuItem) {
@@ -93,7 +111,6 @@ export default function MyCompanyScreen() {
   async function handleUpdateCompany() {
     if (!company) return;
     await updateCompany({ name: editName.trim(), owner: editOwner.trim(), email: editEmail.trim(), description: editDesc.trim() });
-    Alert.alert('Saved', 'Company details updated.');
   }
 
   const stats = {
@@ -106,7 +123,12 @@ export default function MyCompanyScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Eyebrow label="✦ ONYX" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Pressable onPress={() => setPanelOpen(true)} style={styles.profileBtn}>
+            <Text style={styles.profileIconText}>👤</Text>
+          </Pressable>
+          <Eyebrow label="✦ ONYX" />
+        </View>
         <View style={styles.headerRow}>
           <Text style={styles.title}>My Company</Text>
           <Pressable onPress={signOut} style={styles.signOutBtn}>
@@ -161,6 +183,16 @@ export default function MyCompanyScreen() {
                 ))}
               </View>
 
+              {regCuisines.includes('Other') && (
+                <TextInput
+                  style={[styles.input, { marginTop: spacing.sm }]}
+                  value={customCuisine}
+                  onChangeText={setCustomCuisine}
+                  placeholder="Type your cuisine..."
+                  placeholderTextColor={colors.dim}
+                />
+              )}
+
               <Text style={styles.label}>DESCRIPTION</Text>
               <TextInput style={[styles.input, styles.textArea]} value={regDesc} onChangeText={setRegDesc} placeholder="Tell customers about your company..." placeholderTextColor={colors.dim} multiline numberOfLines={4} />
 
@@ -195,6 +227,15 @@ export default function MyCompanyScreen() {
                   </Pressable>
                 ))}
               </View>
+
+              <Text style={styles.label}>IMAGE</Text>
+              <Pressable onPress={pickImage} style={styles.imagePicker}>
+                {itemImage ? (
+                  <Image source={{ uri: itemImage }} style={styles.pickedImage} />
+                ) : (
+                  <Text style={styles.imagePickerText}>Tap to choose image</Text>
+                )}
+              </Pressable>
 
               <Text style={styles.label}>EMOJI</Text>
               <TextInput style={styles.input} value={itemEmoji} onChangeText={setItemEmoji} placeholder="🥩" placeholderTextColor={colors.dim} maxLength={4} />
@@ -325,6 +366,8 @@ export default function MyCompanyScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.obsidian },
+  profileBtn: { padding: spacing.xs },
+  profileIconText: { fontSize: 22 },
   header: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: spacing.md },
   headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: 28, color: colors.white, fontFamily: 'serif', fontWeight: '700', marginTop: spacing.xs },
@@ -380,4 +423,7 @@ const styles = StyleSheet.create({
   editBtnText: { fontSize: 10, color: colors.gold, fontWeight: '600' },
   deleteBtn: { padding: spacing.sm },
   deleteBtnText: { fontSize: 14, color: colors.danger },
+  imagePicker: { backgroundColor: colors.raised, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.goldLine, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', minHeight: 80 },
+  imagePickerText: { fontSize: 13, color: colors.dim },
+  pickedImage: { width: '100%', height: 120, borderRadius: radius.md, resizeMode: 'cover' },
 });

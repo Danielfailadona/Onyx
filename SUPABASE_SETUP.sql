@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   full_name TEXT NOT NULL,
   email TEXT NOT NULL,
   avatar_url TEXT,
+  phone TEXT,
+  address TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
@@ -113,6 +115,7 @@ CREATE TABLE IF NOT EXISTS public.menu_items (
   price DECIMAL(10,2) NOT NULL,
   category TEXT NOT NULL DEFAULT 'Mains',
   emoji TEXT DEFAULT '🍽',
+  image_url TEXT,
   description TEXT DEFAULT '',
   tags TEXT[] DEFAULT '{}',
   rating DECIMAL(3,1) DEFAULT 0,

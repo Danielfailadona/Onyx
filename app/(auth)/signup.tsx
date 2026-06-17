@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/hooks/useAuth';
 import { colors, spacing, radius } from '../../src/utils/theme';
 
+const KeyboardContainer = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
+
 export default function SignupScreen() {
   const router = useRouter();
   const { signUp } = useAuth();
@@ -35,7 +37,6 @@ export default function SignupScreen() {
     setLoading(true);
     try {
       await signUp(email.trim(), password, fullName.trim());
-      Alert.alert('Account Created', 'Check your email for a confirmation link before signing in.');
       router.replace('/(auth)/login');
     } catch (err: any) {
       const msg = err?.message ?? '';
@@ -60,7 +61,7 @@ export default function SignupScreen() {
   const strengthColor = strength === 'weak' ? colors.danger : strength === 'medium' ? colors.gold : colors.success;
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
+    <KeyboardContainer behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           <Text style={styles.mark}>✦</Text>
@@ -144,7 +145,7 @@ export default function SignupScreen() {
           </Pressable>
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardContainer>
   );
 }
 

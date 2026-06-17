@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useStore } from '../src/hooks/useStore';
+import { useAuth } from '../src/hooks/useAuth';
 import { colors, spacing, radius } from '../src/utils/theme';
 import { GoldLine, EmptyState } from '../src/components/UI';
 
 export default function CartScreen() {
   const router = useRouter();
   const { cart, cartTotal, changeCartQty, clearCart } = useStore();
+  const { profile } = useAuth();
   const [processing, setProcessing] = useState(false);
 
   const subtotal = cartTotal;
@@ -23,10 +25,15 @@ export default function CartScreen() {
 
   function handleCheckout() {
     if (cart.length === 0) return;
+    if (!profile?.phone || !profile?.address) {
+      Alert.alert('Incomplete Profile', 'Please add personal info to continue', [
+        { text: 'OK' },
+      ]);
+      return;
+    }
     setProcessing(true);
     setTimeout(() => {
       clearCart();
-      Alert.alert('Order Placed ✦', `Your order of ₱${total.toFixed(2)} has been confirmed.`);
       router.back();
       setProcessing(false);
     }, 800);

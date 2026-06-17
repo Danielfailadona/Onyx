@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, Image, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../src/hooks/useStore';
 import { colors, spacing, radius } from '../src/utils/theme';
@@ -48,7 +48,11 @@ export default function DishDetailScreen() {
         </Pressable>
 
         <View style={styles.hero}>
-          <Text style={styles.heroEmoji}>{emoji}</Text>
+          {item.image_url ? (
+            <Image source={{ uri: item.image_url }} style={styles.heroImage} />
+          ) : (
+            <Text style={styles.heroEmoji}>{emoji}</Text>
+          )}
           <View style={styles.heroOverlay} />
           {item.tags.includes('new') && (
             <View style={styles.heroBadge}><Badge type="new">NEW</Badge></View>
@@ -83,6 +87,23 @@ export default function DishDetailScreen() {
             <Text style={styles.storeLink}>{item.companyName}</Text>
           </Pressable>
         </View>
+
+        {related.length > 0 && (
+          <View style={styles.relatedWrap}>
+            <Text style={styles.relatedTitle}>You Might Also Like</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+              {related.map(r => (
+                <View key={r.id} style={{ width: 180 }}>
+                  <DishCard
+                    item={r}
+                    onPress={() => router.replace({ pathname: '/dish-detail', params: { id: r.id } })}
+                    onAdd={() => addToCart(r)}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>
@@ -90,23 +111,6 @@ export default function DishDetailScreen() {
           <Text style={styles.addToCartText}>Add to Cart ✦</Text>
         </Pressable>
       </View>
-
-      {related.length > 0 && (
-        <View style={styles.relatedWrap}>
-          <Text style={styles.relatedTitle}>You Might Also Like</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
-            {related.map(r => (
-              <View key={r.id} style={{ width: 180 }}>
-                <DishCard
-                  item={r}
-                  onPress={() => router.replace({ pathname: '/dish-detail', params: { id: r.id } })}
-                  onAdd={() => addToCart(r)}
-                />
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      )}
     </View>
   );
 }
@@ -115,8 +119,9 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.obsidian },
   backBtn: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: spacing.sm },
   backText: { fontSize: 14, color: colors.gold, fontWeight: '600' },
-  hero: { height: 200, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.raised, position: 'relative', marginHorizontal: spacing.lg, borderRadius: radius.lg },
+  hero: { height: 200, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.raised, position: 'relative', marginHorizontal: spacing.lg, borderRadius: radius.lg, overflow: 'hidden' },
   heroEmoji: { fontSize: 72 },
+  heroImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: radius.lg },
   heroBadge: { position: 'absolute', top: spacing.md, left: spacing.md },
   body: { padding: spacing.lg },
@@ -133,6 +138,6 @@ const styles = StyleSheet.create({
   footer: { padding: spacing.lg, borderTopWidth: 1, borderTopColor: colors.goldLine, backgroundColor: colors.charcoal },
   addToCartBtn: { backgroundColor: colors.gold, borderRadius: radius.md, padding: spacing.md, alignItems: 'center' },
   addToCartText: { fontSize: 14, fontWeight: '700', color: colors.obsidian, letterSpacing: 2, textTransform: 'uppercase' },
-  relatedWrap: { position: 'absolute', bottom: 80, left: 0, right: 0 },
+  relatedWrap: { marginTop: spacing.lg },
   relatedTitle: { fontSize: 14, color: colors.white, fontFamily: 'serif', fontWeight: '600', marginBottom: spacing.sm, paddingHorizontal: spacing.lg },
 });

@@ -1,10 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useCallback } from 'react';
 import { View, Text, TextInput, FlatList, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
+import * as NavigationBar from 'expo-navigation-bar';
 import { useStore } from '../../src/hooks/useStore';
 import { colors, spacing, radius } from '../../src/utils/theme';
 import { CUISINES, CUISINE_EMOJIS, type MenuItem } from '../../src/data/seed';
 import { DishCard, DishListRow, StoreLogo, Eyebrow, EmptyState } from '../../src/components/UI';
+import { usePanel } from '../../src/hooks/usePanel';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - spacing.lg * 2 - spacing.sm) / 2;
@@ -12,6 +14,19 @@ const CARD_WIDTH = (width - spacing.lg * 2 - spacing.sm) / 2;
 export default function MarketplaceScreen() {
   const router = useRouter();
   const { allItems, allCompanies, addToCart, cartCount } = useStore();
+  const { setOpen: setPanelOpen } = usePanel();
+
+  const lastScrollY = useRef(0);
+  const handleScroll = useCallback((event: any) => {
+    const currentY = event.nativeEvent.contentOffset.y;
+    const diff = currentY - lastScrollY.current;
+    if (diff > 20 && currentY > 0) {
+      NavigationBar.setVisibilityAsync('hidden');
+    } else if (diff < -20) {
+      NavigationBar.setVisibilityAsync('visible');
+    }
+    lastScrollY.current = currentY;
+  }, []);
 
   const [search, setSearch] = useState('');
   const [cuisine, setCuisine] = useState('');
@@ -75,7 +90,12 @@ export default function MarketplaceScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerTop}>
-          <Eyebrow label="✦ ONYX" />
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Pressable onPress={() => setPanelOpen(true)} style={styles.profileBtn}>
+              <Text style={styles.profileIconText}>👤</Text>
+            </Pressable>
+            <Eyebrow label="✦ ONYX" />
+          </View>
           <Pressable onPress={() => router.push('/cart')} style={styles.cartBtn}>
             <Text style={styles.cartIcon}>🛒</Text>
             {cartCount > 0 ? (
@@ -173,6 +193,8 @@ export default function MarketplaceScreen() {
         keyExtractor={item => item.id}
         numColumns={viewMode === 'grid' ? 2 : 1}
         key={viewMode}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
         columnWrapperStyle={viewMode === 'grid' ? { gap: spacing.sm, paddingHorizontal: spacing.lg } : undefined}
         contentContainerStyle={{ paddingHorizontal: viewMode === 'grid' ? 0 : spacing.lg, paddingBottom: spacing.xxl }}
         renderItem={({ item }) =>
@@ -194,6 +216,8 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.obsidian },
   header: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: spacing.md },
   headerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  profileBtn: { padding: spacing.xs },
+  profileIconText: { fontSize: 22 },
   cartBtn: { position: 'relative', padding: spacing.xs },
   cartIcon: { fontSize: 22 },
   cartBadge: { position: 'absolute', top: 0, right: 0, backgroundColor: colors.gold, borderRadius: radius.full, width: 16, height: 16, alignItems: 'center', justifyContent: 'center' },

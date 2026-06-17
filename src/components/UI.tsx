@@ -1,4 +1,4 @@
-import { View, Text, Pressable, StyleSheet, type ViewStyle } from 'react-native';
+import { View, Text, Image, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import { colors, gradients, radius, spacing } from '../utils/theme';
 import { CAT_EMOJI } from '../data/seed';
 import type { MenuItem } from '../data/seed';
@@ -72,7 +72,11 @@ export function DishCard({ item, onPress, onAdd }: DishCardProps) {
     <Pressable onPress={onPress} style={styles.card}>
       <View style={styles.cardTopAccent} />
       <View style={styles.cardImageArea}>
-        <Text style={styles.cardEmoji}>{emoji}</Text>
+        {item.image_url ? (
+          <Image source={{ uri: item.image_url }} style={styles.cardImageFit} />
+        ) : (
+          <Text style={styles.cardEmoji}>{emoji}</Text>
+        )}
         <View style={styles.cardOverlay} />
         <View style={styles.cardPricePill}>
           <Text style={styles.cardPriceText}>₱{item.price}</Text>
@@ -109,7 +113,11 @@ export function DishListRow({ item, onPress, onAdd }: DishListRowProps) {
   return (
     <Pressable onPress={onPress} style={styles.listRow}>
       <View style={styles.listEmojiBox}>
-        <Text style={styles.listEmoji}>{emoji}</Text>
+        {item.image_url ? (
+          <Image source={{ uri: item.image_url }} style={styles.listImageFit} />
+        ) : (
+          <Text style={styles.listEmoji}>{emoji}</Text>
+        )}
       </View>
       <View style={styles.listInfo}>
         <Text style={styles.cardCompany}>{item.companyName}</Text>
@@ -135,7 +143,7 @@ const styles = StyleSheet.create({
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.xxl },
   emptyIcon: { fontSize: 64, opacity: 0.2, marginBottom: spacing.md },
   emptyText: { fontSize: 13, color: colors.mid, fontStyle: 'italic' },
-  card: { backgroundColor: colors.card, borderRadius: radius.lg, marginBottom: spacing.md, overflow: 'hidden' },
+  card: { backgroundColor: colors.card, borderRadius: radius.lg, marginBottom: spacing.md, overflow: 'hidden', elevation: 2, zIndex: 1 },
   cardTopAccent: { height: 2, backgroundColor: 'rgba(201,168,76,0.35)' },
   cardImageArea: { height: 130, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.raised, position: 'relative' },
   cardEmoji: { fontSize: 48 },
@@ -152,7 +160,9 @@ const styles = StyleSheet.create({
   addBtn: { width: 28, height: 28, borderRadius: 14, backgroundColor: colors.gold, alignItems: 'center', justifyContent: 'center' },
   addBtnText: { fontSize: 16, color: colors.obsidian, fontWeight: '700', lineHeight: 18 },
   listRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.sm },
-  listEmojiBox: { width: 64, height: 64, borderRadius: radius.md, backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm },
+  cardImageFit: { width: '100%', height: '100%', resizeMode: 'cover' },
+  listImageFit: { width: 64, height: 64, borderRadius: radius.md, resizeMode: 'cover' },
+  listEmojiBox: { width: 64, height: 64, borderRadius: radius.md, backgroundColor: colors.raised, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm, overflow: 'hidden' },
   listEmoji: { fontSize: 32 },
   listInfo: { flex: 1, marginRight: spacing.sm },
   listRight: { alignItems: 'flex-end' },

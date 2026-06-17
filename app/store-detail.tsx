@@ -1,4 +1,4 @@
-import { View, Text, ScrollView, Pressable, StyleSheet } from 'react-native';
+import { View, Text, ScrollView, Pressable, Image, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../src/hooks/useStore';
 import { colors, spacing, radius } from '../src/utils/theme';
@@ -70,7 +70,11 @@ export default function StoreDetailScreen() {
               onPress={() => router.push({ pathname: '/dish-detail', params: { id: item.id } })}
               style={styles.menuItem}
             >
-              <Text style={styles.menuItemEmoji}>{item.emoji || CAT_EMOJI[item.category] || '🍽'}</Text>
+              {item.image_url ? (
+                <Image source={{ uri: item.image_url }} style={styles.menuItemImage} />
+              ) : (
+                <Text style={styles.menuItemEmoji}>{item.emoji || CAT_EMOJI[item.category] || '🍽'}</Text>
+              )}
               <View style={styles.menuItemInfo}>
                 <Text style={styles.menuItemName}>{item.name}</Text>
                 <Text style={styles.menuItemCategory}>{item.category}</Text>
@@ -106,6 +110,7 @@ const styles = StyleSheet.create({
   menuCount: { fontSize: 12, color: colors.dim },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   menuItemEmoji: { fontSize: 28, marginRight: spacing.sm },
+  menuItemImage: { width: 40, height: 40, borderRadius: radius.sm, marginRight: spacing.sm, resizeMode: 'cover' },
   menuItemInfo: { flex: 1 },
   menuItemName: { fontSize: 14, color: colors.white, fontWeight: '600' },
   menuItemCategory: { fontSize: 11, color: colors.mid, marginTop: 1 },

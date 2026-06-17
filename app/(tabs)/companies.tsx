@@ -3,15 +3,22 @@ import { useRouter } from 'expo-router';
 import { useStore } from '../../src/hooks/useStore';
 import { colors, spacing, radius } from '../../src/utils/theme';
 import { StoreLogo, GoldLine, Eyebrow, EmptyState } from '../../src/components/UI';
+import { usePanel } from '../../src/hooks/usePanel';
 
 export default function CompaniesScreen() {
   const router = useRouter();
   const { allCompanies: companies } = useStore();
+  const { setOpen: setPanelOpen } = usePanel();
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Eyebrow label="✦ ONYX" />
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+          <Pressable onPress={() => setPanelOpen(true)} style={styles.profileBtn}>
+            <Text style={styles.profileIconText}>👤</Text>
+          </Pressable>
+          <Eyebrow label="✦ ONYX" />
+        </View>
         <Text style={styles.title}>Companies</Text>
         <Text style={styles.subtitle}>Verified sellers on the marketplace</Text>
       </View>
@@ -52,6 +59,8 @@ export default function CompaniesScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.obsidian },
+  profileBtn: { padding: spacing.xs },
+  profileIconText: { fontSize: 22 },
   header: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: spacing.md },
   title: { fontSize: 28, color: colors.white, fontFamily: 'serif', fontWeight: '700', marginTop: spacing.xs },
   subtitle: { fontSize: 12, color: colors.mid, marginTop: spacing.xs },

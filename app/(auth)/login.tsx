@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '../../src/hooks/useAuth';
 import { colors, spacing, radius } from '../../src/utils/theme';
 
+const KeyboardContainer = Platform.OS === 'ios' ? KeyboardAvoidingView : View;
+
 export default function LoginScreen() {
   const router = useRouter();
   const { signIn } = useAuth();
@@ -43,7 +45,7 @@ export default function LoginScreen() {
   }
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.container}>
+    <KeyboardContainer behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <View style={styles.hero}>
           <Text style={styles.mark}>✦</Text>
@@ -99,7 +101,7 @@ export default function LoginScreen() {
 
         <Text style={styles.footer}>By continuing, you agree to our Terms of Service and Privacy Policy.</Text>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </KeyboardContainer>
   );
 }
 

@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { colors } from '../../src/utils/theme';
+import { PanelProvider } from '../../src/hooks/usePanel';
+import ProfilePanel from '../../src/components/ProfilePanel';
 
 function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
   return (
@@ -12,37 +14,42 @@ function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
 
 export default function TabLayout() {
   return (
-    <Tabs
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: tabStyles.bar,
-        tabBarActiveTintColor: colors.gold,
-        tabBarInactiveTintColor: colors.dim,
-        tabBarLabelStyle: tabStyles.label,
-      }}
-    >
-      <Tabs.Screen
-        name="marketplace"
-        options={{
-          title: 'Marketplace',
-          tabBarIcon: ({ focused }) => <TabIcon icon="◈" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="companies"
-        options={{
-          title: 'Companies',
-          tabBarIcon: ({ focused }) => <TabIcon icon="⊞" focused={focused} />,
-        }}
-      />
-      <Tabs.Screen
-        name="my-company"
-        options={{
-          title: 'My Company',
-          tabBarIcon: ({ focused }) => <TabIcon icon="⊕" focused={focused} />,
-        }}
-      />
-    </Tabs>
+    <PanelProvider>
+      <View style={{ flex: 1 }}>
+        <Tabs
+          screenOptions={{
+            headerShown: false,
+            tabBarStyle: tabStyles.bar,
+            tabBarActiveTintColor: colors.gold,
+            tabBarInactiveTintColor: colors.dim,
+            tabBarLabelStyle: tabStyles.label,
+          }}
+        >
+          <Tabs.Screen
+            name="marketplace"
+            options={{
+              title: 'Marketplace',
+              tabBarIcon: ({ focused }) => <TabIcon icon="◈" focused={focused} />,
+            }}
+          />
+          <Tabs.Screen
+            name="companies"
+            options={{
+              title: 'Companies',
+              tabBarIcon: ({ focused }) => <TabIcon icon="⊞" focused={focused} />,
+            }}
+          />
+          <Tabs.Screen
+            name="my-company"
+            options={{
+              title: 'My Company',
+              tabBarIcon: ({ focused }) => <TabIcon icon="⊕" focused={focused} />,
+            }}
+          />
+        </Tabs>
+        <ProfilePanel />
+      </View>
+    </PanelProvider>
   );
 }
 

@@ -28,7 +28,7 @@ interface StoreContextValue {
   registerCompany: (data: Omit<Company, 'id'>) => Promise<void>;
   updateCompany: (data: Partial<Company>) => Promise<void>;
   deleteCompany: () => Promise<void>;
-  addItem: (data: Omit<MenuItem, 'id' | 'rating' | 'company' | 'companyName'>) => Promise<void>;
+  addItem: (data: Omit<MenuItem, 'id' | 'rating' | 'company' | 'companyName'> & { image_url?: string }) => Promise<void>;
   updateItem: (id: string, data: Partial<MenuItem>) => Promise<void>;
   removeItem: (id: string) => Promise<void>;
   addToCart: (item: MenuItem) => Promise<void>;
@@ -241,7 +241,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function addItem(data: Omit<MenuItem, 'id' | 'rating' | 'company' | 'companyName'>) {
+  async function addItem(data: Omit<MenuItem, 'id' | 'rating' | 'company' | 'companyName'> & { image_url?: string }) {
     if (SUPABASE_ENABLED) {
       if (!company) return;
       const sb = getSupabase()!;
@@ -251,6 +251,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         price: data.price,
         category: data.category || 'Mains',
         emoji: data.emoji || '🍽',
+        image_url: data.image_url || null,
         description: data.description || '',
         tags: data.tags || [],
         rating: +(4 + Math.random()).toFixed(1),
@@ -282,6 +283,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           price: data.price,
           category: data.category,
           emoji: data.emoji,
+          image_url: data.image_url,
           description: data.description,
         })
         .eq('id', id);
