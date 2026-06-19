@@ -1,22 +1,18 @@
-import { useEffect, useRef, useState } from 'react';
-import { View, Text, TextInput, Pressable, Animated, StyleSheet } from 'react-native';
+import { useEffect, useRef } from 'react';
+import { View, Text, Pressable, Animated, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 import { usePanel } from '../hooks/usePanel';
-import { colors, spacing, radius } from '../utils/theme';
+import { colors, spacing } from '../utils/theme';
 
 const PANEL_WIDTH = 280;
 
 export default function ProfilePanel() {
   const router = useRouter();
   const { open, setOpen } = usePanel();
-  const { user, profile, signOut, updateProfile } = useAuth();
+  const { user, profile, signOut } = useAuth();
   const slideAnim = useRef(new Animated.Value(-PANEL_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  const [showProfileForm, setShowProfileForm] = useState(false);
-  const [phone, setPhone] = useState('');
-  const [address, setAddress] = useState('');
 
   useEffect(() => {
     Animated.parallel([
@@ -31,26 +27,16 @@ export default function ProfilePanel() {
         useNativeDriver: true,
       }),
     ]).start();
-    if (open && profile) {
-      setPhone(profile.phone || '');
-      setAddress(profile.address || '');
-    }
-  }, [open, slideAnim, fadeAnim, profile]);
+  }, [open, slideAnim, fadeAnim]);
 
   function handleClose() {
     setOpen(false);
-    setShowProfileForm(false);
   }
 
   async function handleLogout() {
     handleClose();
     await signOut();
     router.replace('/(auth)/login');
-  }
-
-  async function handleSaveProfile() {
-    await updateProfile({ phone: phone.trim() || null, address: address.trim() || null });
-    setShowProfileForm(false);
   }
 
   const initials = profile?.full_name
@@ -81,38 +67,11 @@ export default function ProfilePanel() {
 
         <View style={styles.divider} />
 
-        <Pressable onPress={() => setShowProfileForm(!showProfileForm)} style={styles.menuItem}>
+        <Pressable onPress={() => { handleClose(); router.push('/edit-address'); }} style={styles.menuItem}>
           <Text style={styles.menuItemIcon}>👤</Text>
           <Text style={styles.menuItemText}>My Profile</Text>
-          <Text style={styles.chevron}>{showProfileForm ? '▲' : '▼'}</Text>
+          <Text style={styles.chevron}>›</Text>
         </Pressable>
-
-        {showProfileForm && (
-          <View style={styles.profileForm}>
-            <Text style={styles.label}>PHONE</Text>
-            <TextInput
-              style={styles.input}
-              value={phone}
-              onChangeText={setPhone}
-              placeholder="Enter phone number"
-              placeholderTextColor={colors.dim}
-              keyboardType="phone-pad"
-            />
-            <Text style={styles.label}>ADDRESS</Text>
-            <TextInput
-              style={[styles.input, styles.textArea]}
-              value={address}
-              onChangeText={setAddress}
-              placeholder="Enter your address"
-              placeholderTextColor={colors.dim}
-              multiline
-              numberOfLines={3}
-            />
-            <Pressable onPress={handleSaveProfile} style={styles.saveBtn}>
-              <Text style={styles.saveBtnText}>Save</Text>
-            </Pressable>
-          </View>
-        )}
 
         <View style={styles.divider} />
 
@@ -211,43 +170,5 @@ const styles = StyleSheet.create({
   logoutText: {
     color: colors.danger,
   },
-  profileForm: {
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.sm,
-  },
-  label: {
-    fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 3,
-    color: colors.gold,
-    marginBottom: spacing.xs,
-    marginTop: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.raised,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    fontSize: 13,
-    color: colors.white,
-    borderWidth: 1,
-    borderColor: colors.goldLine,
-  },
-  textArea: {
-    minHeight: 60,
-    textAlignVertical: 'top',
-  },
-  saveBtn: {
-    backgroundColor: colors.gold,
-    borderRadius: radius.md,
-    padding: spacing.sm,
-    alignItems: 'center',
-    marginTop: spacing.md,
-  },
-  saveBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.obsidian,
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-  },
+
 });

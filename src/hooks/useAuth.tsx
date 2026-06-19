@@ -9,6 +9,8 @@ interface Profile {
   avatar_url: string | null;
   phone: string | null;
   address: string | null;
+  latitude: number | null;
+  longitude: number | null;
   created_at: string;
 }
 

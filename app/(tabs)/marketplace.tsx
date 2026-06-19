@@ -1,7 +1,6 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo } from 'react';
 import { View, Text, TextInput, FlatList, Pressable, StyleSheet, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import * as NavigationBar from 'expo-navigation-bar';
 import { useStore } from '../../src/hooks/useStore';
 import { colors, spacing, radius } from '../../src/utils/theme';
 import { CUISINES, CUISINE_EMOJIS, type MenuItem } from '../../src/data/seed';
@@ -15,18 +14,6 @@ export default function MarketplaceScreen() {
   const router = useRouter();
   const { allItems, allCompanies, addToCart, cartCount } = useStore();
   const { setOpen: setPanelOpen } = usePanel();
-
-  const lastScrollY = useRef(0);
-  const handleScroll = useCallback((event: any) => {
-    const currentY = event.nativeEvent.contentOffset.y;
-    const diff = currentY - lastScrollY.current;
-    if (diff > 20 && currentY > 0) {
-      NavigationBar.setVisibilityAsync('hidden');
-    } else if (diff < -20) {
-      NavigationBar.setVisibilityAsync('visible');
-    }
-    lastScrollY.current = currentY;
-  }, []);
 
   const [search, setSearch] = useState('');
   const [cuisine, setCuisine] = useState('');
@@ -193,8 +180,6 @@ export default function MarketplaceScreen() {
         keyExtractor={item => item.id}
         numColumns={viewMode === 'grid' ? 2 : 1}
         key={viewMode}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
         columnWrapperStyle={viewMode === 'grid' ? { gap: spacing.sm, paddingHorizontal: spacing.lg } : undefined}
         contentContainerStyle={{ paddingHorizontal: viewMode === 'grid' ? 0 : spacing.lg, paddingBottom: spacing.xxl }}
         renderItem={({ item }) =>

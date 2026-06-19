@@ -12,8 +12,16 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   avatar_url TEXT,
   phone TEXT,
   address TEXT,
+  latitude DECIMAL(10,7),
+  longitude DECIMAL(10,7),
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Add columns if missing (for existing databases)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS address TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS latitude DECIMAL(10,7);
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS longitude DECIMAL(10,7);
 
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
@@ -121,6 +129,9 @@ CREATE TABLE IF NOT EXISTS public.menu_items (
   rating DECIMAL(3,1) DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Add columns if missing (for existing databases)
+ALTER TABLE public.menu_items ADD COLUMN IF NOT EXISTS image_url TEXT;
 
 ALTER TABLE public.menu_items ENABLE ROW LEVEL SECURITY;
 

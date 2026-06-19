@@ -37,7 +37,6 @@ export default function MyCompanyScreen() {
   const [itemName, setItemName] = useState('');
   const [itemPrice, setItemPrice] = useState('');
   const [itemCategory, setItemCategory] = useState('');
-  const [itemEmoji, setItemEmoji] = useState('');
   const [itemImage, setItemImage] = useState<string | null>(null);
   const [itemDesc, setItemDesc] = useState('');
   const [itemTags, setItemTags] = useState<string[]>([]);
@@ -84,8 +83,8 @@ export default function MyCompanyScreen() {
       Alert.alert('Error', 'Please enter a valid price.');
       return;
     }
-    await addItem({ name: itemName.trim(), price, category: itemCategory || 'Mains', emoji: itemEmoji || CAT_EMOJI[itemCategory] || '🍽', description: itemDesc.trim(), tags: itemTags, image_url: itemImage || undefined });
-    setItemName(''); setItemPrice(''); setItemCategory(''); setItemEmoji(''); setItemImage(null); setItemDesc(''); setItemTags([]);
+    await addItem({ name: itemName.trim(), price, category: itemCategory || 'Mains', emoji: CAT_EMOJI[itemCategory] || '🍽', description: itemDesc.trim(), tags: itemTags, image_url: itemImage || undefined });
+    setItemName(''); setItemPrice(''); setItemCategory(''); setItemImage(null); setItemDesc(''); setItemTags([]);
   }
 
   function handleDeleteItem(item: MenuItem) {
@@ -222,7 +221,7 @@ export default function MyCompanyScreen() {
               <Text style={styles.label}>CATEGORY</Text>
               <View style={styles.pillRow}>
                 {CATEGORIES.map(c => (
-                  <Pressable key={c} onPress={() => { setItemCategory(c); if (!itemEmoji) setItemEmoji(CAT_EMOJI[c] || ''); }} style={[styles.pill, itemCategory === c && styles.pillActive]}>
+                  <Pressable key={c} onPress={() => setItemCategory(c)} style={[styles.pill, itemCategory === c && styles.pillActive]}>
                     <Text style={[styles.pillText, itemCategory === c && styles.pillTextActive]}>{CAT_EMOJI[c]} {c}</Text>
                   </Pressable>
                 ))}
@@ -236,9 +235,6 @@ export default function MyCompanyScreen() {
                   <Text style={styles.imagePickerText}>Tap to choose image</Text>
                 )}
               </Pressable>
-
-              <Text style={styles.label}>EMOJI</Text>
-              <TextInput style={styles.input} value={itemEmoji} onChangeText={setItemEmoji} placeholder="🥩" placeholderTextColor={colors.dim} maxLength={4} />
 
               <Text style={styles.label}>DESCRIPTION</Text>
               <TextInput style={[styles.input, styles.textArea]} value={itemDesc} onChangeText={setItemDesc} placeholder="Describe your dish..." placeholderTextColor={colors.dim} multiline numberOfLines={3} />
