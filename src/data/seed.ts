@@ -54,6 +54,25 @@ export interface MenuItem {
   isDemo?: boolean;
 }
 
+export interface Order {
+  id: string;
+  userId: string;
+  companyId: string;
+  companyName: string;
+  orderGroupId: string;
+  itemId: string;
+  itemName: string;
+  itemPrice: number;
+  qty: number;
+  userName: string;
+  userPhone: string;
+  userAddress: string;
+  userLatitude: number | null;
+  userLongitude: number | null;
+  status: 'pending' | 'completed';
+  createdAt: string;
+}
+
 export const DEMO_COMPANIES: Company[] = [
   { id: 'demo1', name: 'Noir & Ember', owner: 'Marco Reyes', email: 'marco@noir.com', cuisines: ['Steakhouse'], description: 'Premium steakhouse and fine dining. Where every cut tells a story of craftsmanship and passion.', rating: 4.8, itemCount: 4 },
   { id: 'demo2', name: 'Sakura Omakase', owner: 'Yuki Tanaka', email: 'yuki@sakura.com', cuisines: ['Japanese'], description: 'Authentic Japanese omakase experience. Traditional flavors reimagined with modern precision.', rating: 4.9, itemCount: 2 },

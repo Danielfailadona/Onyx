@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { View, Text, TextInput, FlatList, Pressable, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TextInput, FlatList, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useStore } from '../../src/hooks/useStore';
 import { colors, spacing, radius } from '../../src/utils/theme';
@@ -7,13 +7,14 @@ import { CUISINES, CUISINE_EMOJIS, type MenuItem } from '../../src/data/seed';
 import { DishCard, DishListRow, StoreLogo, Eyebrow, EmptyState } from '../../src/components/UI';
 import { usePanel } from '../../src/hooks/usePanel';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - spacing.lg * 2 - spacing.sm) / 2;
-
 export default function MarketplaceScreen() {
+  const { width } = useWindowDimensions();
   const router = useRouter();
   const { allItems, allCompanies, addToCart, cartCount } = useStore();
   const { setOpen: setPanelOpen } = usePanel();
+  const isWide = width >= 640;
+  const cols = isWide ? 3 : 2;
+  const CARD_WIDTH = (width - spacing.lg * 2 - spacing.sm * (cols - 1)) / cols;
 
   const [search, setSearch] = useState('');
   const [cuisine, setCuisine] = useState('');
@@ -178,14 +179,14 @@ export default function MarketplaceScreen() {
       <FlatList
         data={filtered}
         keyExtractor={item => item.id}
-        numColumns={viewMode === 'grid' ? 2 : 1}
-        key={viewMode}
+        numColumns={viewMode === 'grid' ? cols : 1}
+        key={`${viewMode}-${cols}`}
         columnWrapperStyle={viewMode === 'grid' ? { gap: spacing.sm, paddingHorizontal: spacing.lg } : undefined}
         contentContainerStyle={{ paddingHorizontal: viewMode === 'grid' ? 0 : spacing.lg, paddingBottom: spacing.xxl }}
         renderItem={({ item }) =>
           viewMode === 'grid' ? (
             <View style={{ width: CARD_WIDTH }}>
-              <DishCard item={item} onPress={() => handleItemPress(item)} onAdd={() => handleAddToCart(item)} />
+              <DishCard item={item} onPress={() => handleItemPress(item)} onAdd={() => handleAddToCart(item)} isWide={isWide} />
             </View>
           ) : (
             <DishListRow item={item} onPress={() => handleItemPress(item)} onAdd={() => handleAddToCart(item)} />

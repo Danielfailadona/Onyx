@@ -2,19 +2,27 @@ import { View, Text, Image, ScrollView, Pressable, StyleSheet } from 'react-nati
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../src/hooks/useStore';
 import { colors, spacing, radius } from '../src/utils/theme';
-import { CAT_EMOJI } from '../src/data/seed';
 import { Badge, GoldLine, DishCard } from '../src/components/UI';
 
 export default function DishDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { allItems, addToCart } = useStore();
+
+  function goBack() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/marketplace');
+    }
+  }
+
   const item = allItems.find(i => i.id === id);
 
   if (!item) {
     return (
       <View style={styles.container}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={goBack} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -28,7 +36,6 @@ export default function DishDetailScreen() {
     .filter(i => i.category === item.category && i.id !== item.id)
     .slice(0, 3);
 
-  const emoji = item.emoji || CAT_EMOJI[item.category] || '🍽';
   const dietaryTags: { key: string; label: string }[] = [];
   if (item.tags.includes('veg')) dietaryTags.push({ key: 'veg', label: 'Vegetarian 🌿' });
   if (item.tags.includes('spicy')) dietaryTags.push({ key: 'spicy', label: 'Spicy 🌶' });
@@ -43,16 +50,15 @@ export default function DishDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl * 2 }}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={goBack} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
 
         <View style={styles.hero}>
-          {item.image_url ? (
-            <Image source={{ uri: item.image_url }} style={styles.heroImage} />
-          ) : (
-            <Text style={styles.heroEmoji}>{emoji}</Text>
-          )}
+          <Image
+            source={item.image_url ? { uri: item.image_url } : require('../assets/images/default_image.jpg')}
+            style={styles.heroImage}
+          />
           <View style={styles.heroOverlay} />
           {item.tags.includes('new') && (
             <View style={styles.heroBadge}><Badge type="new">NEW</Badge></View>
@@ -120,7 +126,6 @@ const styles = StyleSheet.create({
   backBtn: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: spacing.sm },
   backText: { fontSize: 14, color: colors.gold, fontWeight: '600' },
   hero: { height: 200, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.raised, position: 'relative', marginHorizontal: spacing.lg, borderRadius: radius.lg, overflow: 'hidden' },
-  heroEmoji: { fontSize: 72 },
   heroImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: radius.lg },
   heroBadge: { position: 'absolute', top: spacing.md, left: spacing.md },

@@ -2,7 +2,6 @@ import { View, Text, ScrollView, Pressable, Image, StyleSheet } from 'react-nati
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../src/hooks/useStore';
 import { colors, spacing, radius } from '../src/utils/theme';
-import { CAT_EMOJI } from '../src/data/seed';
 import { StoreLogo, GoldLine, EmptyState } from '../src/components/UI';
 
 export default function StoreDetailScreen() {
@@ -10,13 +9,21 @@ export default function StoreDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { allCompanies, allItems, addToCart } = useStore();
 
+  function goBack() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/marketplace');
+    }
+  }
+
   const company = allCompanies.find(c => c.id === id);
   const items = allItems.filter(i => i.company === id);
 
   if (!company) {
     return (
       <View style={styles.container}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={goBack} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -31,7 +38,7 @@ export default function StoreDetailScreen() {
   return (
     <View style={styles.container}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl * 2 }}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+        <Pressable onPress={goBack} style={styles.backBtn}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
 
@@ -70,11 +77,10 @@ export default function StoreDetailScreen() {
               onPress={() => router.push({ pathname: '/dish-detail', params: { id: item.id } })}
               style={styles.menuItem}
             >
-              {item.image_url ? (
-                <Image source={{ uri: item.image_url }} style={styles.menuItemImage} />
-              ) : (
-                <Text style={styles.menuItemEmoji}>{item.emoji || CAT_EMOJI[item.category] || '🍽'}</Text>
-              )}
+              <Image
+                source={item.image_url ? { uri: item.image_url } : require('../assets/images/default_image.jpg')}
+                style={styles.menuItemImage}
+              />
               <View style={styles.menuItemInfo}>
                 <Text style={styles.menuItemName}>{item.name}</Text>
                 <Text style={styles.menuItemCategory}>{item.category}</Text>
@@ -109,7 +115,6 @@ const styles = StyleSheet.create({
   menuTitle: { fontSize: 18, color: colors.white, fontFamily: 'serif', fontWeight: '600' },
   menuCount: { fontSize: 12, color: colors.dim },
   menuItem: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-  menuItemEmoji: { fontSize: 28, marginRight: spacing.sm },
   menuItemImage: { width: 40, height: 40, borderRadius: radius.sm, marginRight: spacing.sm, resizeMode: 'cover' },
   menuItemInfo: { flex: 1 },
   menuItemName: { fontSize: 14, color: colors.white, fontWeight: '600' },

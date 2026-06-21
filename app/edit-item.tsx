@@ -10,6 +10,15 @@ export default function EditItemScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { menuItems, updateItem } = useStore();
+
+  function goBack() {
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/marketplace');
+    }
+  }
+
   const item = menuItems.find(i => i.id === id);
 
   const [name, setName] = useState('');
@@ -45,7 +54,7 @@ export default function EditItemScreen() {
   if (!item) {
     return (
       <View style={styles.container}>
-        <Pressable onPress={() => router.back()} style={{ padding: spacing.lg }}>
+        <Pressable onPress={goBack} style={{ padding: spacing.lg }}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
         <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
@@ -65,14 +74,18 @@ export default function EditItemScreen() {
       Alert.alert('Error', 'Please enter a valid price.');
       return;
     }
-    await updateItem(id!, { name: name.trim(), price: p, emoji, category: category || 'Mains', description: description.trim(), image_url: imageUrl || undefined });
-    router.back();
+    try {
+      await updateItem(id!, { name: name.trim(), price: p, emoji, category: category || 'Mains', description: description.trim(), image_url: imageUrl || undefined });
+      goBack();
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to save item.');
+    }
   }
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()}>
+        <Pressable onPress={goBack}>
           <Text style={styles.backText}>← Back</Text>
         </Pressable>
         <Text style={styles.title}>Edit Item</Text>

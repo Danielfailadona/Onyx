@@ -219,7 +219,62 @@ CREATE POLICY "Users can delete from own cart"
   USING (auth.uid() = user_id);
 
 -----------------------------------------
--- 5. SEED DATA (Demo companies & items)
+-- 5. ORDERS TABLE
+-----------------------------------------
+
+CREATE TABLE IF NOT EXISTS public.orders (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  company_id UUID REFERENCES public.companies(id) ON DELETE CASCADE NOT NULL,
+  company_name TEXT NOT NULL DEFAULT '',
+  order_group_id TEXT NOT NULL DEFAULT '',
+  item_id UUID REFERENCES public.menu_items(id) ON DELETE CASCADE NOT NULL,
+  item_name TEXT NOT NULL,
+  item_price DECIMAL(10,2) NOT NULL,
+  qty INTEGER NOT NULL DEFAULT 1,
+  user_name TEXT NOT NULL DEFAULT '',
+  user_phone TEXT NOT NULL DEFAULT '',
+  user_address TEXT NOT NULL DEFAULT '',
+  user_latitude DECIMAL(10,7),
+  user_longitude DECIMAL(10,7),
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Add columns if missing (for existing databases)
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS company_name TEXT NOT NULL DEFAULT '';
+ALTER TABLE public.orders ADD COLUMN IF NOT EXISTS order_group_id TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
+
+-- Drop existing policies before recreating
+DO $$ 
+BEGIN
+    DROP POLICY IF EXISTS "Users can view own orders" ON public.orders;
+    DROP POLICY IF EXISTS "Company owners can view orders for their company" ON public.orders;
+    DROP POLICY IF EXISTS "Users can insert own orders" ON public.orders;
+END $$;
+
+CREATE POLICY "Users can view own orders"
+  ON public.orders FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Company owners can view orders for their company"
+  ON public.orders FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM public.companies
+      WHERE companies.id = company_id
+      AND companies.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert own orders"
+  ON public.orders FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-----------------------------------------
+-- 6. SEED DATA (Demo companies & items)
 -- Uses fixed UUIDs so the app can identify them
 -- ON CONFLICT DO NOTHING prevents duplicate errors
 -----------------------------------------

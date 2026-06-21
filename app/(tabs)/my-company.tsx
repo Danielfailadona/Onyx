@@ -1,57 +1,132 @@
-import { useState } from 'react';
-import { View, Text, TextInput, Pressable, ScrollView, Alert, StyleSheet, Image } from 'react-native';
-import { useRouter } from 'expo-router';
-import * as ImagePicker from 'expo-image-picker';
-import { useStore } from '../../src/hooks/useStore';
-import { useAuth } from '../../src/hooks/useAuth';
-import { colors, spacing, radius } from '../../src/utils/theme';
-import { CUISINES, CATEGORIES, CAT_EMOJI, type MenuItem } from '../../src/data/seed';
-import { Eyebrow, GoldLine, StoreLogo, EmptyState } from '../../src/components/UI';
-import { usePanel } from '../../src/hooks/usePanel';
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
+import { useState, useEffect } from "react";
+import {
+  Alert,
+  Image,
+  Linking,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import {
+  EmptyState,
+  Eyebrow,
+  GoldLine,
+  StoreLogo,
+} from "../../src/components/UI";
+import {
+  CATEGORIES,
+  CAT_EMOJI,
+  CUISINES,
+  type MenuItem,
+  type Order,
+} from "../../src/data/seed";
+import { useAuth } from "../../src/hooks/useAuth";
+import { usePanel } from "../../src/hooks/usePanel";
+import { useStore } from "../../src/hooks/useStore";
+import { colors, radius, spacing } from "../../src/utils/theme";
 
-const TABS = ['Register', 'Add Item', 'Manage', 'Edit'];
+const TABS = ["Register", "Add Item", "Manage", "Orders", "Edit"];
 
-const TAGS = ['popular', 'new', 'veg', 'spicy', 'halal'] as const;
-const TAG_EMOJI: Record<string, string> = { popular: '🔥', new: '✨', veg: '🌿', spicy: '🌶', halal: '🐟' };
+const TAGS = ["popular", "new", "veg", "spicy", "halal"] as const;
+const TAG_EMOJI: Record<string, string> = {
+  popular: "🔥",
+  new: "✨",
+  veg: "🌿",
+  spicy: "🌶",
+  halal: "🐟",
+};
 
 export default function MyCompanyScreen() {
   const router = useRouter();
   const { signOut } = useAuth();
   const { setOpen: setPanelOpen } = usePanel();
   const {
-    company, menuItems, registerCompany, updateCompany, deleteCompany,
-    addItem, removeItem,
+    company,
+    menuItems,
+    registerCompany,
+    updateCompany,
+    deleteCompany,
+    addItem,
+    removeItem,
+    orders,
+    fetchOrders,
+    completeOrder,
   } = useStore();
 
   const [activeTab, setActiveTab] = useState(0);
 
   // Register form
-  const [regName, setRegName] = useState('');
-  const [regOwner, setRegOwner] = useState('');
-  const [regEmail, setRegEmail] = useState('');
+  const [regName, setRegName] = useState("");
+  const [regOwner, setRegOwner] = useState("");
+  const [regEmail, setRegEmail] = useState("");
   const [regCuisines, setRegCuisines] = useState<string[]>([]);
-  const [customCuisine, setCustomCuisine] = useState('');
-  const [regDesc, setRegDesc] = useState('');
+  const [customCuisine, setCustomCuisine] = useState("");
+  const [regDesc, setRegDesc] = useState("");
 
   // Add Item form
-  const [itemName, setItemName] = useState('');
-  const [itemPrice, setItemPrice] = useState('');
-  const [itemCategory, setItemCategory] = useState('');
+  const [itemName, setItemName] = useState("");
+  const [itemPrice, setItemPrice] = useState("");
+  const [itemCategory, setItemCategory] = useState("");
   const [itemImage, setItemImage] = useState<string | null>(null);
-  const [itemDesc, setItemDesc] = useState('');
+  const [itemDesc, setItemDesc] = useState("");
   const [itemTags, setItemTags] = useState<string[]>([]);
 
+  // Orders state
+  const [showOrderReceipt, setShowOrderReceipt] = useState(false);
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  useEffect(() => {
+    if (activeTab === 3 && company) {
+      fetchOrders(company.id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, company?.id]);
+
+  // Success modal
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [addedItemName, setAddedItemName] = useState("");
+
   function toggleCuisine(c: string) {
-    setRegCuisines(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
+    setRegCuisines((prev) =>
+      prev.includes(c) ? prev.filter((x) => x !== c) : [...prev, c],
+    );
   }
 
   function toggleTag(t: string) {
-    setItemTags(prev => prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]);
+    setItemTags((prev) =>
+      prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t],
+    );
+  }
+
+  function groupOrdersByUser(orderList: Order[]) {
+    const groups: { userName: string; userPhone: string; userAddress: string; userLatitude: number | null; userLongitude: number | null; items: Order[] }[] = [];
+    const userIds = [...new Set(orderList.map(o => o.userId))];
+    for (const uid of userIds) {
+      const userOrders = orderList.filter(o => o.userId === uid);
+      if (userOrders.length === 0) continue;
+      const first = userOrders[0];
+      groups.push({
+        userName: first.userName,
+        userPhone: first.userPhone,
+        userAddress: first.userAddress,
+        userLatitude: first.userLatitude,
+        userLongitude: first.userLongitude,
+        items: userOrders,
+      });
+    }
+    return groups;
   }
 
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 0.8,
@@ -62,68 +137,134 @@ export default function MyCompanyScreen() {
   }
 
   async function handleRegister() {
-    if (!regName.trim() || !regOwner.trim() || !regEmail.trim() || !regDesc.trim()) {
-      Alert.alert('Error', 'Please fill in all fields.');
+    if (
+      !regName.trim() ||
+      !regOwner.trim() ||
+      !regEmail.trim() ||
+      !regDesc.trim()
+    ) {
+      Alert.alert("Error", "Please fill in all fields.");
       return;
     }
-    const finalCuisines = regCuisines.includes('Other')
-      ? [...regCuisines.filter(c => c !== 'Other'), customCuisine.trim()].filter(Boolean)
+    const finalCuisines = regCuisines.includes("Other")
+      ? [
+          ...regCuisines.filter((c) => c !== "Other"),
+          customCuisine.trim(),
+        ].filter(Boolean)
       : regCuisines;
-    await registerCompany({ name: regName.trim(), owner: regOwner.trim(), email: regEmail.trim(), cuisines: finalCuisines, description: regDesc.trim() });
+    await registerCompany({
+      name: regName.trim(),
+      owner: regOwner.trim(),
+      email: regEmail.trim(),
+      cuisines: finalCuisines,
+      description: regDesc.trim(),
+    });
     setActiveTab(1);
   }
 
   async function handleAddItem() {
     if (!itemName.trim() || !itemPrice.trim()) {
-      Alert.alert('Error', 'Item name and price are required.');
+      Alert.alert("Error", "Item name and price are required.");
       return;
     }
     const price = parseFloat(itemPrice);
     if (isNaN(price) || price <= 0) {
-      Alert.alert('Error', 'Please enter a valid price.');
+      Alert.alert("Error", "Please enter a valid price.");
       return;
     }
-    await addItem({ name: itemName.trim(), price, category: itemCategory || 'Mains', emoji: CAT_EMOJI[itemCategory] || '🍽', description: itemDesc.trim(), tags: itemTags, image_url: itemImage || undefined });
-    setItemName(''); setItemPrice(''); setItemCategory(''); setItemImage(null); setItemDesc(''); setItemTags([]);
+    try {
+      await addItem({
+        name: itemName.trim(),
+        price,
+        category: itemCategory || "Mains",
+        emoji: CAT_EMOJI[itemCategory] || "🍽",
+        description: itemDesc.trim(),
+        tags: itemTags,
+        image_url: itemImage || undefined,
+      });
+      setItemName("");
+      setItemPrice("");
+      setItemCategory("");
+      setItemImage(null);
+      setItemDesc("");
+      setItemTags([]);
+      setAddedItemName(itemName.trim());
+      setShowSuccessModal(true);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Failed to add item.");
+    }
   }
 
   function handleDeleteItem(item: MenuItem) {
-    Alert.alert('Delete Item', `Remove "${item.name}"?`, [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => removeItem(item.id) },
+    Alert.alert("Delete Item", `Remove "${item.name}"?`, [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => removeItem(item.id),
+      },
     ]);
   }
 
   function handleDeleteCompany() {
-    Alert.alert('Delete Company', 'This will remove your company and all items. This cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: async () => { await deleteCompany(); setActiveTab(0); } },
-    ]);
+    Alert.alert(
+      "Delete Company",
+      "This will remove your company and all items. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            await deleteCompany();
+            setActiveTab(0);
+          },
+        },
+      ],
+    );
   }
 
   // Edit form state
-  const [editName, setEditName] = useState(company?.name || '');
-  const [editOwner, setEditOwner] = useState(company?.owner || '');
-  const [editEmail, setEditEmail] = useState(company?.email || '');
-  const [editDesc, setEditDesc] = useState(company?.description || '');
+  const [editName, setEditName] = useState(company?.name || "");
+  const [editOwner, setEditOwner] = useState(company?.owner || "");
+  const [editEmail, setEditEmail] = useState(company?.email || "");
+  const [editDesc, setEditDesc] = useState(company?.description || "");
 
   async function handleUpdateCompany() {
     if (!company) return;
-    await updateCompany({ name: editName.trim(), owner: editOwner.trim(), email: editEmail.trim(), description: editDesc.trim() });
+    await updateCompany({
+      name: editName.trim(),
+      owner: editOwner.trim(),
+      email: editEmail.trim(),
+      description: editDesc.trim(),
+    });
   }
 
   const stats = {
     items: menuItems.length,
     value: menuItems.reduce((s, i) => s + i.price, 0),
     orders: Math.floor(Math.random() * 50 + 10),
-    rating: menuItems.length ? (menuItems.reduce((s, i) => s + i.rating, 0) / menuItems.length).toFixed(1) : '—',
+    rating: menuItems.length
+      ? (
+          menuItems.reduce((s, i) => s + i.rating, 0) / menuItems.length
+        ).toFixed(1)
+      : "—",
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-          <Pressable onPress={() => setPanelOpen(true)} style={styles.profileBtn}>
+        <View
+          style={{
+            flexDirection: "row",
+            alignItems: "center",
+            gap: spacing.sm,
+          }}
+        >
+          <Pressable
+            onPress={() => setPanelOpen(true)}
+            style={styles.profileBtn}
+          >
             <Text style={styles.profileIconText}>👤</Text>
           </Pressable>
           <Eyebrow label="✦ ONYX" />
@@ -136,53 +277,111 @@ export default function MyCompanyScreen() {
         </View>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabStrip} contentContainerStyle={{ paddingHorizontal: spacing.lg, gap: spacing.xs }}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabStrip}
+        contentContainerStyle={{
+          paddingHorizontal: spacing.lg,
+          gap: spacing.xs,
+        }}
+      >
         {TABS.map((tab, i) => (
           <Pressable
             key={tab}
             onPress={() => setActiveTab(i)}
             style={[styles.tab, activeTab === i && styles.tabActive]}
           >
-            <Text style={[styles.tabText, activeTab === i && styles.tabTextActive]}>{tab}</Text>
+            <Text
+              style={[styles.tabText, activeTab === i && styles.tabTextActive]}
+            >
+              {tab}
+            </Text>
           </Pressable>
         ))}
       </ScrollView>
 
-      <ScrollView style={styles.content} contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl * 2 }} keyboardShouldPersistTaps="handled">
-        {activeTab === 0 && (
-          company ? (
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={{
+          padding: spacing.lg,
+          paddingBottom: spacing.xxl * 2,
+        }}
+        keyboardShouldPersistTaps="handled"
+      >
+        {activeTab === 0 &&
+          (company ? (
             <View style={styles.successBanner}>
               <Text style={styles.successIcon}>✅</Text>
               <Text style={styles.successTitle}>Company Registered</Text>
               <Text style={styles.successText}>{company.name}</Text>
-              <Pressable onPress={() => setActiveTab(1)} style={styles.successBtn}>
+              <Pressable
+                onPress={() => setActiveTab(1)}
+                style={styles.successBtn}
+              >
                 <Text style={styles.successBtnText}>Go to Add Item</Text>
               </Pressable>
             </View>
           ) : (
             <View>
               <Text style={styles.formTitle}>Register Your Company</Text>
-              <Text style={styles.formSub}>Create your store on the marketplace</Text>
+              <Text style={styles.formSub}>
+                Create your store on the marketplace
+              </Text>
 
               <Text style={styles.label}>COMPANY NAME</Text>
-              <TextInput style={styles.input} value={regName} onChangeText={setRegName} placeholder="Your brand name" placeholderTextColor={colors.dim} />
+              <TextInput
+                style={styles.input}
+                value={regName}
+                onChangeText={setRegName}
+                placeholder="Your brand name"
+                placeholderTextColor={colors.dim}
+              />
 
               <Text style={styles.label}>OWNER NAME</Text>
-              <TextInput style={styles.input} value={regOwner} onChangeText={setRegOwner} placeholder="Full name" placeholderTextColor={colors.dim} />
+              <TextInput
+                style={styles.input}
+                value={regOwner}
+                onChangeText={setRegOwner}
+                placeholder="Full name"
+                placeholderTextColor={colors.dim}
+              />
 
               <Text style={styles.label}>CONTACT EMAIL</Text>
-              <TextInput style={styles.input} value={regEmail} onChangeText={setRegEmail} placeholder="email@company.com" placeholderTextColor={colors.dim} keyboardType="email-address" autoCapitalize="none" />
+              <TextInput
+                style={styles.input}
+                value={regEmail}
+                onChangeText={setRegEmail}
+                placeholder="email@company.com"
+                placeholderTextColor={colors.dim}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
 
               <Text style={styles.label}>CUISINES</Text>
               <View style={styles.pillRow}>
-                {CUISINES.map(c => (
-                  <Pressable key={c} onPress={() => toggleCuisine(c)} style={[styles.pill, regCuisines.includes(c) && styles.pillActive]}>
-                    <Text style={[styles.pillText, regCuisines.includes(c) && styles.pillTextActive]}>{c}</Text>
+                {CUISINES.map((c) => (
+                  <Pressable
+                    key={c}
+                    onPress={() => toggleCuisine(c)}
+                    style={[
+                      styles.pill,
+                      regCuisines.includes(c) && styles.pillActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.pillText,
+                        regCuisines.includes(c) && styles.pillTextActive,
+                      ]}
+                    >
+                      {c}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
 
-              {regCuisines.includes('Other') && (
+              {regCuisines.includes("Other") && (
                 <TextInput
                   style={[styles.input, { marginTop: spacing.sm }]}
                   value={customCuisine}
@@ -193,36 +392,73 @@ export default function MyCompanyScreen() {
               )}
 
               <Text style={styles.label}>DESCRIPTION</Text>
-              <TextInput style={[styles.input, styles.textArea]} value={regDesc} onChangeText={setRegDesc} placeholder="Tell customers about your company..." placeholderTextColor={colors.dim} multiline numberOfLines={4} />
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={regDesc}
+                onChangeText={setRegDesc}
+                placeholder="Tell customers about your company..."
+                placeholderTextColor={colors.dim}
+                multiline
+                numberOfLines={4}
+              />
 
               <Pressable onPress={handleRegister} style={styles.primaryBtn}>
                 <Text style={styles.primaryBtnText}>Register Company ✦</Text>
               </Pressable>
             </View>
-          )
-        )}
+          ))}
 
-        {activeTab === 1 && (
-          company ? (
+        {activeTab === 1 &&
+          (company ? (
             <View>
               <View style={styles.postingBanner}>
                 <StoreLogo name={company.name} index={0} size={32} />
-                <Text style={styles.postingText}>Posting as <Text style={styles.postingName}>{company.name}</Text></Text>
+                <Text style={styles.postingText}>
+                  Posting as{" "}
+                  <Text style={styles.postingName}>{company.name}</Text>
+                </Text>
               </View>
 
               <Text style={styles.formTitle}>Add Menu Item</Text>
 
               <Text style={styles.label}>DISH NAME</Text>
-              <TextInput style={styles.input} value={itemName} onChangeText={setItemName} placeholder="e.g. Truffle Pasta" placeholderTextColor={colors.dim} />
+              <TextInput
+                style={styles.input}
+                value={itemName}
+                onChangeText={setItemName}
+                placeholder="e.g. Truffle Pasta"
+                placeholderTextColor={colors.dim}
+              />
 
               <Text style={styles.label}>PRICE (₱)</Text>
-              <TextInput style={styles.input} value={itemPrice} onChangeText={setItemPrice} placeholder="0.00" placeholderTextColor={colors.dim} keyboardType="decimal-pad" />
+              <TextInput
+                style={styles.input}
+                value={itemPrice}
+                onChangeText={setItemPrice}
+                placeholder="0.00"
+                placeholderTextColor={colors.dim}
+                keyboardType="decimal-pad"
+              />
 
               <Text style={styles.label}>CATEGORY</Text>
               <View style={styles.pillRow}>
-                {CATEGORIES.map(c => (
-                  <Pressable key={c} onPress={() => setItemCategory(c)} style={[styles.pill, itemCategory === c && styles.pillActive]}>
-                    <Text style={[styles.pillText, itemCategory === c && styles.pillTextActive]}>{CAT_EMOJI[c]} {c}</Text>
+                {CATEGORIES.map((c) => (
+                  <Pressable
+                    key={c}
+                    onPress={() => setItemCategory(c)}
+                    style={[
+                      styles.pill,
+                      itemCategory === c && styles.pillActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.pillText,
+                        itemCategory === c && styles.pillTextActive,
+                      ]}
+                    >
+                      {CAT_EMOJI[c]} {c}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
@@ -230,49 +466,86 @@ export default function MyCompanyScreen() {
               <Text style={styles.label}>IMAGE</Text>
               <Pressable onPress={pickImage} style={styles.imagePicker}>
                 {itemImage ? (
-                  <Image source={{ uri: itemImage }} style={styles.pickedImage} />
+                  <Image
+                    source={{ uri: itemImage }}
+                    style={styles.pickedImage}
+                  />
                 ) : (
-                  <Text style={styles.imagePickerText}>Tap to choose image</Text>
+                  <Text style={styles.imagePickerText}>
+                    Tap to choose image
+                  </Text>
                 )}
               </Pressable>
 
               <Text style={styles.label}>DESCRIPTION</Text>
-              <TextInput style={[styles.input, styles.textArea]} value={itemDesc} onChangeText={setItemDesc} placeholder="Describe your dish..." placeholderTextColor={colors.dim} multiline numberOfLines={3} />
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={itemDesc}
+                onChangeText={setItemDesc}
+                placeholder="Describe your dish..."
+                placeholderTextColor={colors.dim}
+                multiline
+                numberOfLines={3}
+              />
 
               <Text style={styles.label}>TAGS</Text>
               <View style={styles.pillRow}>
-                {TAGS.map(t => (
-                  <Pressable key={t} onPress={() => toggleTag(t)} style={[styles.pill, itemTags.includes(t) && styles.pillActive]}>
-                    <Text style={[styles.pillText, itemTags.includes(t) && styles.pillTextActive]}>{TAG_EMOJI[t]} {t}</Text>
+                {TAGS.map((t) => (
+                  <Pressable
+                    key={t}
+                    onPress={() => toggleTag(t)}
+                    style={[
+                      styles.pill,
+                      itemTags.includes(t) && styles.pillActive,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.pillText,
+                        itemTags.includes(t) && styles.pillTextActive,
+                      ]}
+                    >
+                      {TAG_EMOJI[t]} {t}
+                    </Text>
                   </Pressable>
                 ))}
               </View>
 
-              <Pressable onPress={handleAddItem} style={styles.primaryBtn}>
+              <Pressable
+                onPress={handleAddItem}
+                style={styles.primaryBtn}
+              >
                 <Text style={styles.primaryBtnText}>Add to Menu ✦</Text>
               </Pressable>
             </View>
           ) : (
             <View style={styles.locked}>
               <Text style={styles.lockedIcon}>🔒</Text>
-              <Text style={styles.lockedText}>Register your company first to add menu items.</Text>
-              <Pressable onPress={() => setActiveTab(0)} style={styles.secondaryBtn}>
+              <Text style={styles.lockedText}>
+                Register your company first to add menu items.
+              </Text>
+              <Pressable
+                onPress={() => setActiveTab(0)}
+                style={styles.secondaryBtn}
+              >
                 <Text style={styles.secondaryBtnText}>Go to Register</Text>
               </Pressable>
             </View>
-          )
-        )}
+          ))}
 
-        {activeTab === 2 && (
-          company ? (
+        {activeTab === 2 &&
+          (company ? (
             <View>
               <View style={styles.statsRow}>
                 {[
-                  { label: 'Items', value: stats.items },
-                  { label: 'Est. Value', value: `₱${stats.value.toLocaleString()}` },
-                  { label: 'Orders', value: stats.orders },
-                  { label: 'Rating', value: stats.rating },
-                ].map(s => (
+                  { label: "Items", value: stats.items },
+                  {
+                    label: "Est. Value",
+                    value: `₱${stats.value.toLocaleString()}`,
+                  },
+                  { label: "Orders", value: stats.orders },
+                  { label: "Rating", value: stats.rating },
+                ].map((s) => (
                   <View key={s.label} style={styles.statCard}>
                     <Text style={styles.statValue}>{s.value}</Text>
                     <Text style={styles.statLabel}>{s.label}</Text>
@@ -290,17 +563,32 @@ export default function MyCompanyScreen() {
               {menuItems.length === 0 ? (
                 <EmptyState icon="🍽" text="No menu items yet. Start adding!" />
               ) : (
-                menuItems.map(item => (
+                menuItems.map((item) => (
                   <View key={item.id} style={styles.menuItem}>
-                    <Text style={styles.menuItemEmoji}>{item.emoji || CAT_EMOJI[item.category] || '🍽'}</Text>
+                    <Text style={styles.menuItemEmoji}>
+                      {item.emoji || CAT_EMOJI[item.category] || "🍽"}
+                    </Text>
                     <View style={styles.menuItemInfo}>
                       <Text style={styles.menuItemName}>{item.name}</Text>
-                      <Text style={styles.menuItemMeta}>{item.category} • ₱{item.price}</Text>
+                      <Text style={styles.menuItemMeta}>
+                        {item.category} • ₱{item.price}
+                      </Text>
                     </View>
-                    <Pressable onPress={() => router.push({ pathname: '/edit-item', params: { id: item.id } })} style={styles.editBtn}>
+                    <Pressable
+                      onPress={() =>
+                        router.push({
+                          pathname: "/edit-item",
+                          params: { id: item.id },
+                        })
+                      }
+                      style={styles.editBtn}
+                    >
                       <Text style={styles.editBtnText}>Edit</Text>
                     </Pressable>
-                    <Pressable onPress={() => handleDeleteItem(item)} style={styles.deleteBtn}>
+                    <Pressable
+                      onPress={() => handleDeleteItem(item)}
+                      style={styles.deleteBtn}
+                    >
                       <Text style={styles.deleteBtnText}>✕</Text>
                     </Pressable>
                   </View>
@@ -310,52 +598,248 @@ export default function MyCompanyScreen() {
           ) : (
             <View style={styles.locked}>
               <Text style={styles.lockedIcon}>🔒</Text>
-              <Text style={styles.lockedText}>Register your company first to manage items.</Text>
-              <Pressable onPress={() => setActiveTab(0)} style={styles.secondaryBtn}>
+              <Text style={styles.lockedText}>
+                Register your company first to manage items.
+              </Text>
+              <Pressable
+                onPress={() => setActiveTab(0)}
+                style={styles.secondaryBtn}
+              >
                 <Text style={styles.secondaryBtnText}>Go to Register</Text>
               </Pressable>
             </View>
-          )
-        )}
+          ))}
 
-        {activeTab === 3 && (
-          company ? (
+        {activeTab === 3 &&
+          (company ? (
+            <View>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Orders</Text>
+                <Text style={{ fontSize: 12, color: colors.dim }}>{orders.length} total</Text>
+              </View>
+
+              {orders.length === 0 ? (
+                <EmptyState icon="📦" text="No orders yet." />
+              ) : (
+                groupOrdersByUser(orders).map((group, gi) => (
+                  <View key={gi} style={styles.orderGroup}>
+                    <View style={styles.orderUserHeader}>
+                      <Text style={styles.orderUserIcon}>👤</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.orderUserName}>{group.userName}</Text>
+                        <Text style={styles.orderUserPhone}>{group.userPhone}</Text>
+                      </View>
+                      <Text style={[styles.orderStatus, group.items.every(i => i.status === 'completed') && styles.orderStatusDone]}>
+                        {group.items.every(i => i.status === 'completed') ? '✅ Completed' : '🟡 Pending'}
+                      </Text>
+                    </View>
+
+                    {group.userAddress ? (
+                      <Pressable
+                        onPress={() => {
+                          if (group.userLatitude && group.userLongitude) {
+                            const url = Platform.OS === 'web'
+                              ? `https://www.google.com/maps?q=${group.userLatitude},${group.userLongitude}`
+                              : `geo:${group.userLatitude},${group.userLongitude}`;
+                            Linking.openURL(url);
+                          }
+                        }}
+                        style={styles.orderAddressRow}
+                      >
+                        <Text style={styles.orderAddressText}>📍 {group.userAddress}</Text>
+                      </Pressable>
+                    ) : null}
+
+                    <GoldLine style={{ marginVertical: spacing.sm }} />
+
+                    {group.items.map((o, oi) => (
+                      <View key={oi} style={styles.orderItemRow}>
+                        <Text style={styles.orderItemQty}>{o.qty}×</Text>
+                        <Text style={styles.orderItemName}>{o.itemName}</Text>
+                        <Text style={styles.orderItemPrice}>₱{(o.itemPrice * o.qty).toLocaleString()}</Text>
+                      </View>
+                    ))}
+
+                    {group.items.some(i => i.status === 'pending') && (
+                      <Pressable
+                        onPress={() => {
+                          setSelectedOrder(group.items[0]);
+                          setShowOrderReceipt(true);
+                        }}
+                        style={styles.orderDoneBtn}
+                      >
+                        <Text style={styles.orderDoneText}>Done</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                ))
+              )}
+            </View>
+          ) : (
+            <View style={styles.locked}>
+              <Text style={styles.lockedIcon}>🔒</Text>
+              <Text style={styles.lockedText}>
+                Register your company first to view orders.
+              </Text>
+              <Pressable
+                onPress={() => setActiveTab(0)}
+                style={styles.secondaryBtn}
+              >
+                <Text style={styles.secondaryBtnText}>Go to Register</Text>
+              </Pressable>
+            </View>
+          ))}
+
+        {activeTab === 4 &&
+          (company ? (
             <View>
               <Text style={styles.formTitle}>Edit Company</Text>
 
               <Text style={styles.label}>COMPANY NAME</Text>
-              <TextInput style={styles.input} value={editName} onChangeText={setEditName} placeholderTextColor={colors.dim} />
+              <TextInput
+                style={styles.input}
+                value={editName}
+                onChangeText={setEditName}
+                placeholderTextColor={colors.dim}
+              />
 
               <Text style={styles.label}>OWNER NAME</Text>
-              <TextInput style={styles.input} value={editOwner} onChangeText={setEditOwner} placeholderTextColor={colors.dim} />
+              <TextInput
+                style={styles.input}
+                value={editOwner}
+                onChangeText={setEditOwner}
+                placeholderTextColor={colors.dim}
+              />
 
               <Text style={styles.label}>CONTACT EMAIL</Text>
-              <TextInput style={styles.input} value={editEmail} onChangeText={setEditEmail} placeholderTextColor={colors.dim} keyboardType="email-address" autoCapitalize="none" />
+              <TextInput
+                style={styles.input}
+                value={editEmail}
+                onChangeText={setEditEmail}
+                placeholderTextColor={colors.dim}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
 
               <Text style={styles.label}>DESCRIPTION</Text>
-              <TextInput style={[styles.input, styles.textArea]} value={editDesc} onChangeText={setEditDesc} placeholderTextColor={colors.dim} multiline numberOfLines={4} />
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                value={editDesc}
+                onChangeText={setEditDesc}
+                placeholderTextColor={colors.dim}
+                multiline
+                numberOfLines={4}
+              />
 
-              <Pressable onPress={handleUpdateCompany} style={styles.primaryBtn}>
+              <Pressable
+                onPress={handleUpdateCompany}
+                style={styles.primaryBtn}
+              >
                 <Text style={styles.primaryBtnText}>Save Changes ✦</Text>
               </Pressable>
 
               <GoldLine style={{ marginVertical: spacing.lg }} />
 
               <Pressable onPress={handleDeleteCompany} style={styles.dangerBtn}>
-                <Text style={styles.dangerBtnText}>Delete Company & All Items</Text>
+                <Text style={styles.dangerBtnText}>
+                  Delete Company & All Items
+                </Text>
               </Pressable>
             </View>
           ) : (
             <View style={styles.locked}>
               <Text style={styles.lockedIcon}>🔒</Text>
-              <Text style={styles.lockedText}>Register your company first to edit details.</Text>
-              <Pressable onPress={() => setActiveTab(0)} style={styles.secondaryBtn}>
+              <Text style={styles.lockedText}>
+                Register your company first to edit details.
+              </Text>
+              <Pressable
+                onPress={() => setActiveTab(0)}
+                style={styles.secondaryBtn}
+              >
                 <Text style={styles.secondaryBtnText}>Go to Register</Text>
               </Pressable>
             </View>
-          )
-        )}
+          ))}
       </ScrollView>
+
+      <Modal visible={showSuccessModal} transparent animationType="fade" onRequestClose={() => setShowSuccessModal(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={{ fontSize: 48, marginBottom: spacing.sm }}>✅</Text>
+            <Text style={styles.modalTitle}>Menu Item Added</Text>
+            <Text style={styles.modalMessage}>
+              "{addedItemName}" has been added to your menu.
+            </Text>
+            <Pressable
+              onPress={() => {
+                setShowSuccessModal(false);
+                router.replace("/(tabs)/marketplace");
+              }}
+              style={styles.modalBtn}
+            >
+              <Text style={styles.modalBtnText}>View in Marketplace ✦</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={showOrderReceipt} transparent animationType="fade" onRequestClose={() => setShowOrderReceipt(false)}>
+        <ScrollView contentContainerStyle={styles.receiptOverlay}>
+          <View style={styles.receiptCard}>
+            <Text style={styles.receiptTitle}>✦ Receipt ✦</Text>
+            <GoldLine style={{ marginVertical: spacing.sm }} />
+
+            {selectedOrder && (
+              <>
+                <View style={styles.receiptSection}>
+                  <Text style={styles.receiptSectionLabel}>Customer</Text>
+                  <Text style={styles.receiptInfo}>{selectedOrder.userName}</Text>
+                  <Text style={styles.receiptInfo}>{selectedOrder.userPhone}</Text>
+                  <Text style={styles.receiptInfo}>{selectedOrder.userAddress}</Text>
+                </View>
+
+                <GoldLine style={{ marginVertical: spacing.sm }} />
+
+                <Text style={styles.receiptSectionLabel}>Items</Text>
+                {orders.filter(o => o.userId === selectedOrder.userId && o.companyId === selectedOrder.companyId).map((o, i) => (
+                  <View key={i} style={styles.receiptRow}>
+                    <Text style={styles.receiptQty}>{o.qty}×</Text>
+                    <Text style={styles.receiptName}>{o.itemName}</Text>
+                    <Text style={styles.receiptPrice}>₱{(o.itemPrice * o.qty).toLocaleString()}</Text>
+                  </View>
+                ))}
+
+                <GoldLine style={{ marginVertical: spacing.sm }} />
+
+                <Text style={styles.receiptStatus}>Status: ✅ Completed</Text>
+                <Text style={styles.receiptScreenshot}>📸 Please take a screenshot of your receipt</Text>
+
+                {Platform.OS === 'web' && (
+                  <Pressable onPress={() => window.print()} style={styles.printBtn}>
+                    <Text style={styles.printBtnText}>🖨️ Print</Text>
+                  </Pressable>
+                )}
+              </>
+            )}
+
+            <Pressable
+              onPress={() => {
+                if (selectedOrder) {
+                  const userOrders = orders.filter(
+                    o => o.userId === selectedOrder.userId && o.companyId === selectedOrder.companyId && o.status === 'pending'
+                  );
+                  userOrders.forEach(o => completeOrder(o.id));
+                }
+                setShowOrderReceipt(false);
+                setSelectedOrder(null);
+              }}
+              style={styles.receiptCloseBtn}
+            >
+              <Text style={styles.receiptCloseText}>Close</Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </Modal>
     </View>
   );
 }
@@ -364,62 +848,392 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.obsidian },
   profileBtn: { padding: spacing.xs },
   profileIconText: { fontSize: 22 },
-  header: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: spacing.md },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 28, color: colors.white, fontFamily: 'serif', fontWeight: '700', marginTop: spacing.xs },
-  signOutBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.goldLine },
-  signOutText: { fontSize: 11, color: colors.mid, fontWeight: '600' },
+  header: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: 56,
+    paddingBottom: spacing.md,
+  },
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  title: {
+    fontSize: 28,
+    color: colors.white,
+    fontFamily: "serif",
+    fontWeight: "700",
+    marginTop: spacing.xs,
+  },
+  signOutBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+  },
+  signOutText: { fontSize: 11, color: colors.mid, fontWeight: "600" },
   tabStrip: { maxHeight: 44, marginBottom: spacing.sm },
-  tab: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.goldLine },
+  tab: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+  },
   tabActive: { backgroundColor: colors.gold, borderColor: colors.gold },
-  tabText: { fontSize: 12, color: colors.mid, fontWeight: '600' },
+  tabText: { fontSize: 12, color: colors.mid, fontWeight: "600" },
   tabTextActive: { color: colors.obsidian },
   content: { flex: 1 },
-  formTitle: { fontSize: 20, color: colors.white, fontFamily: 'serif', fontWeight: '600', marginBottom: spacing.xs },
+  formTitle: {
+    fontSize: 20,
+    color: colors.white,
+    fontFamily: "serif",
+    fontWeight: "600",
+    marginBottom: spacing.xs,
+  },
   formSub: { fontSize: 12, color: colors.mid, marginBottom: spacing.lg },
-  label: { fontSize: 9, fontWeight: '700', letterSpacing: 3, color: colors.gold, marginBottom: spacing.sm, marginTop: spacing.md },
-  input: { backgroundColor: colors.raised, borderRadius: radius.md, padding: spacing.md, fontSize: 15, color: colors.white, borderWidth: 1, borderColor: colors.goldLine },
-  textArea: { minHeight: 80, textAlignVertical: 'top' },
-  pillRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  pill: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.full, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.goldLine },
+  label: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 3,
+    color: colors.gold,
+    marginBottom: spacing.sm,
+    marginTop: spacing.md,
+  },
+  input: {
+    backgroundColor: colors.raised,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    fontSize: 15,
+    color: colors.white,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+  },
+  textArea: { minHeight: 80, textAlignVertical: "top" },
+  pillRow: { flexDirection: "row", flexWrap: "wrap", gap: spacing.xs },
+  pill: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.full,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+  },
   pillActive: { backgroundColor: colors.goldDim, borderColor: colors.gold },
   pillText: { fontSize: 12, color: colors.mid },
-  pillTextActive: { color: colors.gold, fontWeight: '600' },
-  primaryBtn: { backgroundColor: colors.gold, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', marginTop: spacing.lg },
-  primaryBtnText: { fontSize: 14, fontWeight: '700', color: colors.obsidian, letterSpacing: 2, textTransform: 'uppercase' },
-  secondaryBtn: { borderWidth: 1, borderColor: colors.goldLine, borderRadius: radius.md, padding: spacing.md, alignItems: 'center', marginTop: spacing.md },
-  secondaryBtnText: { fontSize: 13, color: colors.gold, fontWeight: '600' },
-  dangerBtn: { borderWidth: 1, borderColor: colors.danger, borderRadius: radius.md, padding: spacing.md, alignItems: 'center' },
-  dangerBtnText: { fontSize: 13, color: colors.danger, fontWeight: '600' },
-  successBanner: { backgroundColor: 'rgba(74,158,114,0.1)', borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.success, alignItems: 'center' },
+  pillTextActive: { color: colors.gold, fontWeight: "600" },
+  primaryBtn: {
+    backgroundColor: colors.gold,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: "center",
+    marginTop: spacing.lg,
+  },
+  primaryBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.obsidian,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  secondaryBtn: {
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: "center",
+    marginTop: spacing.md,
+  },
+  secondaryBtnText: { fontSize: 13, color: colors.gold, fontWeight: "600" },
+  dangerBtn: {
+    borderWidth: 1,
+    borderColor: colors.danger,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: "center",
+  },
+  dangerBtnText: { fontSize: 13, color: colors.danger, fontWeight: "600" },
+  successBanner: {
+    backgroundColor: "rgba(74,158,114,0.1)",
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.success,
+    alignItems: "center",
+  },
   successIcon: { fontSize: 36, marginBottom: spacing.sm },
-  successTitle: { fontSize: 18, color: colors.success, fontFamily: 'serif', fontWeight: '600' },
+  successTitle: {
+    fontSize: 18,
+    color: colors.success,
+    fontFamily: "serif",
+    fontWeight: "600",
+  },
   successText: { fontSize: 14, color: colors.mid, marginVertical: spacing.sm },
-  successBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: radius.md, backgroundColor: colors.success },
-  successBtnText: { fontSize: 12, color: '#fff', fontWeight: '700' },
-  postingBanner: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, backgroundColor: colors.surface, borderRadius: radius.md, padding: spacing.md, marginBottom: spacing.lg },
+  successBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.success,
+  },
+  successBtnText: { fontSize: 12, color: "#fff", fontWeight: "700" },
+  postingBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: spacing.lg,
+  },
   postingText: { fontSize: 13, color: colors.mid },
-  postingName: { color: colors.gold, fontWeight: '600' },
-  locked: { alignItems: 'center', paddingVertical: spacing.xxl },
+  postingName: { color: colors.gold, fontWeight: "600" },
+  locked: { alignItems: "center", paddingVertical: spacing.xxl },
   lockedIcon: { fontSize: 48, marginBottom: spacing.md, opacity: 0.3 },
-  lockedText: { fontSize: 14, color: colors.mid, textAlign: 'center', marginBottom: spacing.md },
-  statsRow: { flexDirection: 'row', gap: spacing.sm, marginBottom: spacing.lg },
-  statCard: { flex: 1, backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.md, alignItems: 'center' },
-  statValue: { fontSize: 18, color: colors.gold, fontFamily: 'serif', fontWeight: '700' },
-  statLabel: { fontSize: 9, color: colors.dim, fontWeight: '700', letterSpacing: 2, marginTop: spacing.xs, textTransform: 'uppercase' },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: spacing.sm },
-  sectionTitle: { fontSize: 16, color: colors.white, fontFamily: 'serif', fontWeight: '600' },
-  addLink: { fontSize: 13, color: colors.gold, fontWeight: '600' },
-  menuItem: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.card, borderRadius: radius.md, padding: spacing.sm, marginBottom: spacing.xs },
+  lockedText: {
+    fontSize: 14,
+    color: colors.mid,
+    textAlign: "center",
+    marginBottom: spacing.md,
+  },
+  statsRow: { flexDirection: "row", gap: spacing.sm, marginBottom: spacing.lg },
+  statCard: {
+    flex: 1,
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: "center",
+  },
+  statValue: {
+    fontSize: 18,
+    color: colors.gold,
+    fontFamily: "serif",
+    fontWeight: "700",
+  },
+  statLabel: {
+    fontSize: 9,
+    color: colors.dim,
+    fontWeight: "700",
+    letterSpacing: 2,
+    marginTop: spacing.xs,
+    textTransform: "uppercase",
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: spacing.sm,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    color: colors.white,
+    fontFamily: "serif",
+    fontWeight: "600",
+  },
+  addLink: { fontSize: 13, color: colors.gold, fontWeight: "600" },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    padding: spacing.sm,
+    marginBottom: spacing.xs,
+  },
   menuItemEmoji: { fontSize: 28, marginRight: spacing.sm },
   menuItemInfo: { flex: 1 },
-  menuItemName: { fontSize: 14, color: colors.white, fontWeight: '600' },
+  menuItemName: { fontSize: 14, color: colors.white, fontWeight: "600" },
   menuItemMeta: { fontSize: 11, color: colors.mid, marginTop: 2 },
-  editBtn: { paddingHorizontal: spacing.md, paddingVertical: spacing.xs, borderRadius: radius.sm, borderWidth: 1, borderColor: colors.goldLine, marginRight: spacing.xs },
-  editBtnText: { fontSize: 10, color: colors.gold, fontWeight: '600' },
+  editBtn: {
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: radius.sm,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+    marginRight: spacing.xs,
+  },
+  editBtnText: { fontSize: 10, color: colors.gold, fontWeight: "600" },
   deleteBtn: { padding: spacing.sm },
   deleteBtnText: { fontSize: 14, color: colors.danger },
-  imagePicker: { backgroundColor: colors.raised, borderRadius: radius.md, padding: spacing.md, borderWidth: 1, borderColor: colors.goldLine, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', minHeight: 80 },
+  imagePicker: {
+    backgroundColor: colors.raised,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+    borderStyle: "dashed",
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: 80,
+  },
   imagePickerText: { fontSize: 13, color: colors.dim },
-  pickedImage: { width: '100%', height: 120, borderRadius: radius.md, resizeMode: 'cover' },
+  pickedImage: {
+    width: "100%",
+    height: 120,
+    borderRadius: radius.md,
+    resizeMode: "cover",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.lg,
+  },
+  modalContent: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    alignItems: "center",
+    width: "100%",
+    maxWidth: 340,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+  },
+  modalTitle: {
+    fontSize: 20,
+    color: colors.white,
+    fontFamily: "serif",
+    fontWeight: "700",
+    marginBottom: spacing.sm,
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: colors.mid,
+    textAlign: "center",
+    marginBottom: spacing.lg,
+  },
+  modalBtn: {
+    backgroundColor: colors.gold,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    alignItems: "center",
+    width: "100%",
+  },
+  modalBtnText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.obsidian,
+    letterSpacing: 2,
+    textTransform: "uppercase",
+  },
+  orderGroup: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+  },
+  orderUserHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.sm,
+  },
+  orderUserIcon: { fontSize: 22 },
+  orderUserName: {
+    fontSize: 15,
+    color: colors.white,
+    fontWeight: "600",
+    fontFamily: "serif",
+  },
+  orderUserPhone: { fontSize: 12, color: colors.mid, marginTop: 1 },
+  orderStatus: { fontSize: 11, fontWeight: "600" },
+  orderStatusDone: { fontSize: 11, fontWeight: "600" },
+  orderAddressRow: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.xs,
+  },
+  orderAddressText: { fontSize: 13, color: colors.gold },
+  orderItemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 3,
+  },
+  orderItemQty: { fontSize: 13, color: colors.white, fontWeight: "700", width: 28 },
+  orderItemName: { flex: 1, fontSize: 13, color: colors.white },
+  orderItemPrice: { fontSize: 13, color: colors.gold, fontFamily: "serif", fontWeight: "700" },
+  orderDoneBtn: {
+    marginTop: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: radius.md,
+    backgroundColor: colors.success,
+    alignItems: "center",
+  },
+  orderDoneText: { fontSize: 13, fontWeight: "700", color: "#fff" },
+  receiptOverlay: {
+    flexGrow: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: spacing.lg,
+  },
+  receiptCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    width: "100%",
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+  },
+  receiptTitle: {
+    fontSize: 20,
+    color: colors.gold,
+    fontFamily: "serif",
+    fontWeight: "700",
+    textAlign: "center",
+  },
+  receiptSection: { marginBottom: spacing.sm },
+  receiptSectionLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    letterSpacing: 2,
+    textTransform: "uppercase",
+    color: colors.gold,
+    marginBottom: spacing.xs,
+  },
+  receiptInfo: { fontSize: 13, color: colors.white, marginBottom: 2 },
+  receiptRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: spacing.xs,
+  },
+  receiptQty: {
+    fontSize: 13,
+    color: colors.white,
+    fontWeight: "700",
+    width: 28,
+  },
+  receiptName: { flex: 1, fontSize: 13, color: colors.white },
+  receiptPrice: {
+    fontSize: 13,
+    color: colors.gold,
+    fontFamily: "serif",
+    fontWeight: "700",
+  },
+  receiptStatus: { fontSize: 13, color: colors.success, fontWeight: "600", textAlign: "center", marginBottom: spacing.sm },
+  receiptScreenshot: {
+    fontSize: 12,
+    color: colors.mid,
+    textAlign: "center",
+    fontStyle: "italic",
+    marginBottom: spacing.sm,
+  },
+  printBtn: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.goldLine,
+    alignItems: "center",
+  },
+  printBtnText: { fontSize: 14, color: colors.gold, fontWeight: "600" },
+  receiptCloseBtn: {
+    marginTop: spacing.md,
+    padding: spacing.md,
+    borderRadius: radius.md,
+    backgroundColor: colors.gold,
+    alignItems: "center",
+  },
+  receiptCloseText: { fontSize: 14, fontWeight: "700", color: colors.obsidian },
 });
