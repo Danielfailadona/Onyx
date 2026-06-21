@@ -72,6 +72,7 @@ function mapItem(row: any, companies: Company[]): MenuItem {
     price: row.price,
     category: row.category,
     emoji: row.emoji,
+    image_url: row.image_url || undefined,
     description: row.description || '',
     tags: row.tags || [],
     rating: row.rating ?? 0,

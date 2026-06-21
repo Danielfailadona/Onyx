@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, ScrollView, Pressable, Image, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../src/hooks/useStore';
@@ -8,6 +9,11 @@ export default function StoreDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { allCompanies, allItems, addToCart } = useStore();
+  const [failedImgs, setFailedImgs] = useState<Set<string>>(new Set());
+
+  function imgFailed(itemId: string) {
+    setFailedImgs(prev => new Set(prev).add(itemId));
+  }
 
   function goBack() {
     if (router.canGoBack()) {
@@ -78,7 +84,8 @@ export default function StoreDetailScreen() {
               style={styles.menuItem}
             >
               <Image
-                source={item.image_url ? { uri: item.image_url } : require('../assets/images/default_image.jpg')}
+                source={item.image_url && !failedImgs.has(item.id) ? { uri: item.image_url } : require('../assets/images/default_image.jpg')}
+                onError={() => imgFailed(item.id)}
                 style={styles.menuItemImage}
               />
               <View style={styles.menuItemInfo}>

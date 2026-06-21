@@ -1,6 +1,9 @@
+import { useState } from 'react';
 import { View, Text, Image, Pressable, StyleSheet, type ViewStyle } from 'react-native';
 import { colors, gradients, radius, spacing } from '../utils/theme';
 import type { MenuItem } from '../data/seed';
+
+const FALLBACK = require('../../assets/images/default_image.jpg');
 
 export function GoldLine({ style }: { style?: ViewStyle }) {
   return <View style={[styles.goldLine, style]} />;
@@ -67,12 +70,15 @@ interface DishCardProps {
 }
 
 export function DishCard({ item, onPress, onAdd, isWide = false }: DishCardProps) {
+  const [imgErr, setImgErr] = useState(false);
+  const imgSrc = item.image_url && !imgErr ? { uri: item.image_url } : FALLBACK;
   return (
     <Pressable onPress={onPress} style={[styles.card, isWide && { height: 330 }]}>
       <View style={styles.cardTopAccent} />
       <View style={[styles.cardImageArea, isWide && { height: 200 }]}>
         <Image
-          source={item.image_url ? { uri: item.image_url } : require('../../assets/images/default_image.jpg')}
+          source={imgSrc}
+          onError={() => setImgErr(true)}
           style={[styles.cardImageFit, isWide && { resizeMode: 'contain' }]}
         />
         <View style={styles.cardOverlay} />
@@ -107,11 +113,14 @@ interface DishListRowProps {
 }
 
 export function DishListRow({ item, onPress, onAdd }: DishListRowProps) {
+  const [imgErr, setImgErr] = useState(false);
+  const imgSrc = item.image_url && !imgErr ? { uri: item.image_url } : FALLBACK;
   return (
     <Pressable onPress={onPress} style={styles.listRow}>
       <View style={styles.listEmojiBox}>
         <Image
-          source={item.image_url ? { uri: item.image_url } : require('../../assets/images/default_image.jpg')}
+          source={imgSrc}
+          onError={() => setImgErr(true)}
           style={styles.listImageFit}
         />
       </View>

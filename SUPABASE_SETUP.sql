@@ -301,3 +301,32 @@ INSERT INTO public.menu_items (id, company_id, name, price, category, emoji, des
   ('b0000000-0000-0000-0000-000000000011', 'a0000000-0000-0000-0000-000000000005', 'Wagyu Beef Sliders',           680, 'Starters', '🍔', 'Mini wagyu patties, caramelized onions, aged cheddar, brioche buns.',     ARRAY['popular'], 4.6),
   ('b0000000-0000-0000-0000-000000000012', 'a0000000-0000-0000-0000-000000000005', 'Noir Signature Cocktail',      480, 'Drinks',   '🍸', 'Vodka, blackberry liqueur, fresh lime, mint, soda.',                      ARRAY[]::TEXT[],  4.4)
 ON CONFLICT (id) DO NOTHING;
+
+-- Clean up any stale local/ blob URLs saved from before the upload fix
+UPDATE public.menu_items SET image_url = NULL WHERE image_url LIKE 'blob:%' OR image_url LIKE 'file:%';
+
+-----------------------------------------
+-- 7. STORAGE BUCKET & POLICIES (images)
+-- Run this AFTER creating the 'menu-images' bucket in the Supabase Dashboard UI
+-- or the first INSERT will create it automatically
+-----------------------------------------
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('menu-images', 'menu-images', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Drop existing policies before recreating
+DROP POLICY IF EXISTS "auth upload menu-images" ON storage.objects;
+DROP POLICY IF EXISTS "public view menu-images" ON storage.objects;
+
+-- Allow authenticated users to upload files
+CREATE POLICY "auth upload menu-images"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'menu-images');
+
+-- Allow public (unauthenticated) to view/download files
+CREATE POLICY "public view menu-images"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'menu-images');

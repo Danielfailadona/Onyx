@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { View, Text, Image, ScrollView, Pressable, StyleSheet } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useStore } from '../src/hooks/useStore';
@@ -8,6 +9,7 @@ export default function DishDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { allItems, addToCart } = useStore();
+  const [heroFailed, setHeroFailed] = useState(false);
 
   function goBack() {
     if (router.canGoBack()) {
@@ -56,7 +58,8 @@ export default function DishDetailScreen() {
 
         <View style={styles.hero}>
           <Image
-            source={item.image_url ? { uri: item.image_url } : require('../assets/images/default_image.jpg')}
+            source={item.image_url && !heroFailed ? { uri: item.image_url } : require('../assets/images/default_image.jpg')}
+            onError={() => setHeroFailed(true)}
             style={styles.heroImage}
           />
           <View style={styles.heroOverlay} />

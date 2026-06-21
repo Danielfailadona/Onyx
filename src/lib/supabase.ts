@@ -24,3 +24,23 @@ export function getSupabase(): SupabaseClient | null {
 
   return _client;
 }
+
+export async function uploadImage(localUri: string): Promise<string | null> {
+  const sb = getSupabase();
+  if (!sb) return null;
+
+  const ext = localUri.split('.').pop()?.toLowerCase() || 'jpg';
+  const fileName = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const filePath = `menu-images/${fileName}`;
+
+  const response = await fetch(localUri);
+  const blob = await response.blob();
+
+  const { error } = await sb.storage.from('menu-images').upload(filePath, blob, {
+    contentType: `image/${ext === 'jpg' ? 'jpeg' : ext}`,
+  });
+  if (error) throw error;
+
+  const { data: { publicUrl } } = sb.storage.from('menu-images').getPublicUrl(filePath);
+  return publicUrl;
+}

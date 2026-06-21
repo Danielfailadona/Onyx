@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, ScrollView, Alert, StyleSheet, Image 
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { useStore } from '../src/hooks/useStore';
+import { uploadImage } from '../src/lib/supabase';
 import { colors, spacing, radius } from '../src/utils/theme';
 import { CATEGORIES, CAT_EMOJI } from '../src/data/seed';
 
@@ -27,6 +28,7 @@ export default function EditItemScreen() {
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [previewFailed, setPreviewFailed] = useState(false);
 
   async function pickImage() {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -35,9 +37,11 @@ export default function EditItemScreen() {
       aspect: [1, 1],
       quality: 0.8,
     });
-    if (!result.canceled) {
-      setImageUrl(result.assets[0].uri);
-    }
+    if (result.canceled) return;
+    const localUri = result.assets[0].uri;
+    setImageUrl(localUri);
+    const publicUrl = await uploadImage(localUri);
+    if (publicUrl) setImageUrl(publicUrl);
   }
 
   useEffect(() => {
@@ -100,9 +104,9 @@ export default function EditItemScreen() {
         <TextInput style={styles.input} value={price} onChangeText={setPrice} placeholderTextColor={colors.dim} keyboardType="decimal-pad" />
 
         <Text style={styles.label}>IMAGE</Text>
-        <Pressable onPress={pickImage} style={styles.imagePicker}>
-          {imageUrl ? (
-            <Image source={{ uri: imageUrl }} style={styles.pickedImage} />
+        <Pressable onPress={() => { pickImage(); setPreviewFailed(false); }} style={styles.imagePicker}>
+          {imageUrl && !previewFailed ? (
+            <Image source={{ uri: imageUrl }} onError={() => setPreviewFailed(true)} style={styles.pickedImage} />
           ) : (
             <Text style={styles.imagePickerText}>Tap to choose image</Text>
           )}

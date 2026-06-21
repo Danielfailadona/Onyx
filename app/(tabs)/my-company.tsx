@@ -30,6 +30,7 @@ import {
 import { useAuth } from "../../src/hooks/useAuth";
 import { usePanel } from "../../src/hooks/usePanel";
 import { useStore } from "../../src/hooks/useStore";
+import { uploadImage } from "../../src/lib/supabase";
 import { colors, radius, spacing } from "../../src/utils/theme";
 
 const TABS = ["Register", "Add Item", "Manage", "Orders", "Edit"];
@@ -77,6 +78,7 @@ export default function MyCompanyScreen() {
   const [itemImage, setItemImage] = useState<string | null>(null);
   const [itemDesc, setItemDesc] = useState("");
   const [itemTags, setItemTags] = useState<string[]>([]);
+  const [previewFailed, setPreviewFailed] = useState(false);
 
   // Orders state
   const [showOrderReceipt, setShowOrderReceipt] = useState(false);
@@ -131,9 +133,11 @@ export default function MyCompanyScreen() {
       aspect: [1, 1],
       quality: 0.8,
     });
-    if (!result.canceled) {
-      setItemImage(result.assets[0].uri);
-    }
+    if (result.canceled) return;
+    const localUri = result.assets[0].uri;
+    setItemImage(localUri);
+    const publicUrl = await uploadImage(localUri);
+    if (publicUrl) setItemImage(publicUrl);
   }
 
   async function handleRegister() {
@@ -464,10 +468,11 @@ export default function MyCompanyScreen() {
               </View>
 
               <Text style={styles.label}>IMAGE</Text>
-              <Pressable onPress={pickImage} style={styles.imagePicker}>
-                {itemImage ? (
+              <Pressable onPress={() => { pickImage(); setPreviewFailed(false); }} style={styles.imagePicker}>
+                {itemImage && !previewFailed ? (
                   <Image
                     source={{ uri: itemImage }}
+                    onError={() => setPreviewFailed(true)}
                     style={styles.pickedImage}
                   />
                 ) : (
