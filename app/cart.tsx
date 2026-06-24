@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { View, Text, ScrollView, Pressable, Alert, Modal, Platform, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useStore } from '../src/hooks/useStore';
@@ -6,6 +6,8 @@ import { useAuth } from '../src/hooks/useAuth';
 import { colors, spacing, radius } from '../src/utils/theme';
 import { GoldLine, EmptyState } from '../src/components/UI';
 import type { Order } from '../src/data/seed';
+import { captureRef } from 'react-native-view-shot';
+import * as MediaLibrary from 'expo-media-library';
 
 export default function CartScreen() {
   const router = useRouter();
@@ -18,6 +20,8 @@ export default function CartScreen() {
   const [selectedGroups, setSelectedGroups] = useState<Set<string>>(new Set());
   const [showOrderReceipt, setShowOrderReceipt] = useState(false);
   const [receiptGroup, setReceiptGroup] = useState<Order[]>([]);
+  const receiptRef = useRef<View>(null);
+  const orderReceiptRef = useRef<View>(null);
 
   const subtotal = cartTotal;
   const service = subtotal * 0.1;
@@ -130,6 +134,21 @@ export default function CartScreen() {
   function openReceipt(group: typeof orderGroups[number]) {
     setReceiptGroup(group.items);
     setShowOrderReceipt(true);
+  }
+
+  async function handleSaveReceipt(ref: React.RefObject<View | null>) {
+    try {
+      const uri = await captureRef(ref, { format: 'png', quality: 1 });
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Needed', 'Allow photo library access to save receipts.');
+        return;
+      }
+      await MediaLibrary.saveToLibraryAsync(uri);
+      Alert.alert('Saved', 'Receipt saved to your photos.');
+    } catch (e: any) {
+      Alert.alert('Error', e?.message || 'Failed to save receipt.');
+    }
   }
 
   function formatDate(iso: string) {
@@ -301,7 +320,7 @@ export default function CartScreen() {
 
       <Modal visible={showReceipt} transparent animationType="fade" onRequestClose={handleCloseReceipt}>
         <ScrollView contentContainerStyle={styles.receiptOverlay}>
-          <View style={styles.receiptCard}>
+          <View ref={receiptRef} style={styles.receiptCard}>
             <Text style={styles.receiptTitle}>✦ Receipt ✦</Text>
             <GoldLine style={{ marginVertical: spacing.sm }} />
 
@@ -339,11 +358,17 @@ export default function CartScreen() {
             )}
 
             <GoldLine style={{ marginVertical: spacing.sm }} />
-            <Text style={styles.receiptScreenshot}>📸 Please take a screenshot of your receipt</Text>
 
-            {Platform.OS === 'web' && (
-              <Pressable onPress={() => window.print()} style={styles.printBtn}>
-                <Text style={styles.printBtnText}>🖨️ Print</Text>
+            {Platform.OS === 'web' ? (
+              <>
+                <Text style={styles.receiptScreenshot}>📸 Please take a screenshot of your receipt</Text>
+                <Pressable onPress={() => window.print()} style={styles.printBtn}>
+                  <Text style={styles.printBtnText}>🖨️ Print</Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable onPress={() => handleSaveReceipt(receiptRef)} style={styles.saveBtn}>
+                <Text style={styles.saveBtnText}>💾 Save to Photos</Text>
               </Pressable>
             )}
 
@@ -356,7 +381,7 @@ export default function CartScreen() {
 
       <Modal visible={showOrderReceipt} transparent animationType="fade" onRequestClose={() => setShowOrderReceipt(false)}>
         <ScrollView contentContainerStyle={styles.receiptOverlay}>
-          <View style={styles.receiptCard}>
+          <View ref={orderReceiptRef} style={styles.receiptCard}>
             <Text style={styles.receiptTitle}>✦ Receipt ✦</Text>
             {receiptGroup.length > 0 && (
               <Text style={styles.receiptCompany}>{receiptGroup[0].companyName}</Text>
@@ -404,11 +429,17 @@ export default function CartScreen() {
             )}
 
             <GoldLine style={{ marginVertical: spacing.sm }} />
-            <Text style={styles.receiptScreenshot}>📸 Please take a screenshot of your receipt</Text>
 
-            {Platform.OS === 'web' && (
-              <Pressable onPress={() => window.print()} style={styles.printBtn}>
-                <Text style={styles.printBtnText}>🖨️ Print</Text>
+            {Platform.OS === 'web' ? (
+              <>
+                <Text style={styles.receiptScreenshot}>📸 Please take a screenshot of your receipt</Text>
+                <Pressable onPress={() => window.print()} style={styles.printBtn}>
+                  <Text style={styles.printBtnText}>🖨️ Print</Text>
+                </Pressable>
+              </>
+            ) : (
+              <Pressable onPress={() => handleSaveReceipt(orderReceiptRef)} style={styles.saveBtn}>
+                <Text style={styles.saveBtnText}>💾 Save to Photos</Text>
               </Pressable>
             )}
 
@@ -498,6 +529,8 @@ const styles = StyleSheet.create({
   receiptScreenshot: { fontSize: 12, color: colors.mid, textAlign: 'center', fontStyle: 'italic' },
   printBtn: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.goldLine, alignItems: 'center' },
   printBtnText: { fontSize: 14, color: colors.gold, fontWeight: '600' },
+  saveBtn: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, borderWidth: 1, borderColor: colors.gold, alignItems: 'center' },
+  saveBtnText: { fontSize: 14, color: colors.gold, fontWeight: '600' },
   receiptCloseBtn: { marginTop: spacing.md, padding: spacing.md, borderRadius: radius.md, backgroundColor: colors.gold, alignItems: 'center' },
   receiptCloseText: { fontSize: 14, fontWeight: '700', color: colors.obsidian },
 });

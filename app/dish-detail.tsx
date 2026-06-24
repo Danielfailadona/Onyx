@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: colors.obsidian },
   backBtn: { paddingHorizontal: spacing.lg, paddingTop: 56, paddingBottom: spacing.sm },
   backText: { fontSize: 14, color: colors.gold, fontWeight: '600' },
-  hero: { height: 200, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.raised, position: 'relative', marginHorizontal: spacing.lg, borderRadius: radius.lg, overflow: 'hidden' },
+  hero: { aspectRatio: 1, maxWidth: 400, alignSelf: 'center', width: '100%', alignItems: 'center', justifyContent: 'center', backgroundColor: colors.raised, position: 'relative', marginHorizontal: spacing.lg, borderRadius: radius.lg, overflow: 'hidden' },
   heroImage: { width: '100%', height: '100%', resizeMode: 'cover' },
   heroOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.15)', borderRadius: radius.lg },
   heroBadge: { position: 'absolute', top: spacing.md, left: spacing.md },

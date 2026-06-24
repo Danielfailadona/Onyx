@@ -49,6 +49,13 @@
           "resizeMode": "contain",
           "backgroundColor": "#080808"
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow Onyx to save receipts to your photo library.",
+          "savePhotosPermission": "Allow Onyx to save receipts to your photo library."
+        }
       ]
     ],
     "experiments": {
