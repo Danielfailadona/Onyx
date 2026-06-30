@@ -4,6 +4,7 @@ import { colors, gradients, radius, spacing } from '../utils/theme';
 import type { MenuItem } from '../data/seed';
 
 const FALLBACK = require('../../assets/images/default_image.jpg');
+const COMPANY_LOGO_FALLBACK = require('../../assets/images/Default-Company-Logo.png');
 
 export function GoldLine({ style }: { style?: ViewStyle }) {
   return <View style={[styles.goldLine, style]} />;
@@ -42,22 +43,38 @@ export function EmptyState({ icon = '🍽', text = 'Nothing here yet.' }) {
   );
 }
 
-export function StoreLogo({ name, index = 0, size = 48 }: { name: string; index?: number; size?: number }) {
+export function StoreLogo({ name, index = 0, size = 48, imageUrl }: { name: string; index?: number; size?: number; imageUrl?: string }) {
+  const [imgErr, setImgErr] = useState(false);
   const gradient = gradients[index % gradients.length];
+
+  if (imageUrl && !imgErr) {
+    return (
+      <View style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', backgroundColor: colors.surface }}>
+        <Image
+          source={{ uri: imageUrl }}
+          onError={() => setImgErr(true)}
+          style={{ width: size, height: size, borderRadius: size / 2 }}
+        />
+      </View>
+    );
+  }
+
   return (
     <View
       style={{
         width: size,
         height: size,
         borderRadius: size / 2,
+        overflow: 'hidden',
         backgroundColor: gradient[0],
         alignItems: 'center',
         justifyContent: 'center',
       }}
     >
-      <Text style={{ color: '#fff', fontSize: size * 0.4, fontWeight: '700', letterSpacing: 1 }}>
-        {name.slice(0, 3).toUpperCase()}
-      </Text>
+      <Image
+        source={COMPANY_LOGO_FALLBACK}
+        style={{ width: size, height: size, borderRadius: size / 2 }}
+      />
     </View>
   );
 }

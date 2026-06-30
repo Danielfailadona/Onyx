@@ -19,6 +19,7 @@ export default function RootLayout() {
           <Stack.Screen name="cart" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="edit-item" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="edit-address" options={{ animation: 'slide_from_right' }} />
+          <Stack.Screen name="settings" options={{ animation: 'slide_from_right' }} />
           <Stack.Screen name="+not-found" />
         </Stack>
       </StoreProvider>

@@ -34,6 +34,7 @@ export interface Company {
   email: string;
   cuisines: string[];
   description: string;
+  logo_url?: string;
   isDemo?: boolean;
   rating?: number;
   itemCount?: number;

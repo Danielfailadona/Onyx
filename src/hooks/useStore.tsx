@@ -57,6 +57,7 @@ function mapCompany(row: any): Company {
     email: row.email,
     cuisines: row.cuisines || [],
     description: row.description || '',
+    logo_url: row.logo_url || undefined,
     rating: row.rating ?? 0,
     itemCount: row.item_count ?? 0,
   };
@@ -186,14 +187,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (SUPABASE_ENABLED) {
       if (!user) throw new Error('Must be signed in to register a company.');
       const sb = getSupabase()!;
-      const { error } = await sb.from('companies').insert({
+      const insertData: Record<string, any> = {
         user_id: user.id,
         name: data.name,
         owner: data.owner,
         email: data.email,
         cuisines: data.cuisines,
         description: data.description,
-      });
+      };
+      if (data.logo_url) insertData.logo_url = data.logo_url;
+      const { error } = await sb.from('companies').insert(insertData);
       if (error) throw error;
       await refreshData();
     } else {
@@ -208,14 +211,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (SUPABASE_ENABLED) {
       if (!company) return;
       const sb = getSupabase()!;
+      const updateData: Record<string, any> = {
+        name: data.name,
+        owner: data.owner,
+        email: data.email,
+        description: data.description,
+      };
+      if (data.logo_url) updateData.logo_url = data.logo_url;
       const { error } = await sb
         .from('companies')
-        .update({
-          name: data.name,
-          owner: data.owner,
-          email: data.email,
-          description: data.description,
-        })
+        .update(updateData)
         .eq('id', company.id);
       if (error) throw error;
       await refreshData();

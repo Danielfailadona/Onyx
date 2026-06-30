@@ -24,6 +24,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   updateProfile: (updates: Partial<Profile>) => Promise<void>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -108,12 +109,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(prev => prev ? { ...prev, ...updates } : null);
   }
 
+  async function changePassword(currentPassword: string, newPassword: string) {
+    const sb = getSupabase();
+    if (!sb || !session?.user?.email) throw new Error('Not authenticated');
+
+    const { error: signInError } = await sb.auth.signInWithPassword({
+      email: session.user.email,
+      password: currentPassword,
+    });
+    if (signInError) throw new Error('Current password is incorrect.');
+
+    const { error: updateError } = await sb.auth.updateUser({ password: newPassword });
+    if (updateError) throw updateError;
+  }
+
   return (
     <AuthContext.Provider
       value={{
         session, profile, loading, authReady,
         user: session?.user ?? null,
-        signUp, signIn, signOut, updateProfile,
+        signUp, signIn, signOut, updateProfile, changePassword,
       }}
     >
       {children}

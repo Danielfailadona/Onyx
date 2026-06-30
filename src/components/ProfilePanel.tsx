@@ -1,11 +1,12 @@
-import { useEffect, useRef } from 'react';
-import { View, Text, Pressable, Animated, StyleSheet } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { View, Text, Pressable, Animated, StyleSheet, Image } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '../hooks/useAuth';
 import { usePanel } from '../hooks/usePanel';
 import { colors, spacing } from '../utils/theme';
 
 const PANEL_WIDTH = 280;
+const DEFAULT_AVATAR = require('../../assets/images/Default-Company-Logo.png');
 
 export default function ProfilePanel() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function ProfilePanel() {
   const { user, profile, signOut } = useAuth();
   const slideAnim = useRef(new Animated.Value(-PANEL_WIDTH)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [avatarError, setAvatarError] = useState(false);
 
   useEffect(() => {
     Animated.parallel([
@@ -39,12 +41,12 @@ export default function ProfilePanel() {
     router.replace('/(auth)/login');
   }
 
-  const initials = profile?.full_name
-    ? profile.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
-    : user?.email?.slice(0, 2).toUpperCase() || '?';
-
   const displayName = profile?.full_name || 'User';
   const displayEmail = user?.email || profile?.email || 'No email';
+
+  const avatarSource = profile?.avatar_url && !avatarError
+    ? { uri: profile.avatar_url }
+    : DEFAULT_AVATAR;
 
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={open ? 'auto' : 'none'}>
@@ -58,9 +60,7 @@ export default function ProfilePanel() {
         </Pressable>
 
         <View style={styles.avatarSection}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initials}</Text>
-          </View>
+          <Image source={avatarSource} onError={() => setAvatarError(true)} style={styles.avatar} />
           <Text style={styles.name}>{displayName}</Text>
           <Text style={styles.email}>{displayEmail}</Text>
         </View>
@@ -70,6 +70,12 @@ export default function ProfilePanel() {
         <Pressable onPress={() => { handleClose(); router.push('/edit-address'); }} style={styles.menuItem}>
           <Text style={styles.menuItemIcon}>👤</Text>
           <Text style={styles.menuItemText}>My Profile</Text>
+          <Text style={styles.chevron}>›</Text>
+        </Pressable>
+
+        <Pressable onPress={() => { handleClose(); router.push('/settings'); }} style={styles.menuItem}>
+          <Text style={styles.menuItemIcon}>⚙</Text>
+          <Text style={styles.menuItemText}>Settings</Text>
           <Text style={styles.chevron}>›</Text>
         </Pressable>
 
@@ -119,16 +125,8 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: colors.surface,
     marginBottom: spacing.md,
-  },
-  avatarText: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: colors.obsidian,
-    letterSpacing: 1,
   },
   name: {
     fontSize: 18,

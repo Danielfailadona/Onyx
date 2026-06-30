@@ -85,6 +85,8 @@ CREATE TABLE IF NOT EXISTS public.companies (
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
+ALTER TABLE public.companies ADD COLUMN IF NOT EXISTS logo_url TEXT;
+
 ALTER TABLE public.companies ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies before recreating
@@ -330,3 +332,45 @@ CREATE POLICY "public view menu-images"
 ON storage.objects FOR SELECT
 TO public
 USING (bucket_id = 'menu-images');
+
+-----------------------------------------
+-- 8. STORAGE BUCKET: user-profile
+-----------------------------------------
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('user-profile', 'user-profile', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "auth upload user-profile" ON storage.objects;
+DROP POLICY IF EXISTS "public view user-profile" ON storage.objects;
+
+CREATE POLICY "auth upload user-profile"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'user-profile');
+
+CREATE POLICY "public view user-profile"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'user-profile');
+
+-----------------------------------------
+-- 9. STORAGE BUCKET: company-profile
+-----------------------------------------
+
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('company-profile', 'company-profile', true)
+ON CONFLICT (id) DO NOTHING;
+
+DROP POLICY IF EXISTS "auth upload company-profile" ON storage.objects;
+DROP POLICY IF EXISTS "public view company-profile" ON storage.objects;
+
+CREATE POLICY "auth upload company-profile"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (bucket_id = 'company-profile');
+
+CREATE POLICY "public view company-profile"
+ON storage.objects FOR SELECT
+TO public
+USING (bucket_id = 'company-profile');
